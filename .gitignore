@@ -328,3 +328,10 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+RFMiner/Data
+RFMiner/main.cpp
+RFMiner/Tester.cpp
+RFMiner/Tester.h
+RFMiner/TestFunctions.cpp
+RFMiner/TestFunctions.h
