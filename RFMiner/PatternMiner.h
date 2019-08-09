@@ -38,10 +38,10 @@ private:
 	int debug_;
 
 	unordered_map<int, unordered_set<int>> ScanCountSingleItemsInit();
-	void RFGrowth(vector<int> pattern, unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set);
-	unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> Grow(int e, unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set);
-	pair<double, double> CalculateWeight(unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set, int pattern_length, int option);
-	double UpperBound(unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set, vector<double> pgaps, int pattern_length);
+	void RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set);
+	vector<PatternInstance> Grow(int e, vector<PatternInstance> pi_set);
+	pair<double, double> CalculateWeight(vector<PatternInstance> pi_set, int pattern_length, int option);
+	double UpperBound(vector<PatternInstance> pi_set, vector<double> pgaps, int pattern_length);
 	double Potential(int pattern_length, int frequency, int max_len);
 };
 

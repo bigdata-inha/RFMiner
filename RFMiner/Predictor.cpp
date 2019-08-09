@@ -75,12 +75,12 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 	const vector<double>& pattern_gaps = pattern.gap_sequence;
 
 	// Find minimal landmarks of a pattern P's prefix [1: |P| - 1] in query sequence
-	unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set;
-	unordered_map<PI::PatternInstance, int, boost::hash<PI::PatternInstance>> final_pi_set;
+	vector<PatternInstance> pi_set;
+	vector<PatternInstance> final_pi_set;
 
 	/* Find all indices of query sequence, where the event at that index is the first event in the pattern sequence */
 	for (int i = 0; i < query_sz; ++i) {
-		if (query_sequence[i] == pattern_sequence[0]) pi_set.insert(PI::PatternInstance(0, i, i));
+		if (query_sequence[i] == pattern_sequence[0]) pi_set.push_back(PatternInstance(0, i, i));
 	}
 	
 	// If there is no match
@@ -100,15 +100,8 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 	double max_frequency_score = -1.0;
 	int x = -1;
 	vector<double> max_score_gaps;
-	if (debug_) {
-		printf("start\n");
-			for (const auto &entry : final_pi_set) {
-				printf("[%d %d] pattern_offset: %d\n", entry.first.l, entry.first.r, entry.second);
-			}
-		printf("---\n");
-	}
-	for (const auto &entry : final_pi_set) {
-		const PI::PatternInstance &pi = entry.first;
+	
+	for (const auto &pi : final_pi_set) {
 		const int &last_matched_pattern_offset = pattern_sz - 2;
 
 		// P = <a, b, c, d>
@@ -188,10 +181,10 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 	return Rule(precedent, consequent, max_score_gaps, max_transition_score, max_ratio_score, max_frequency_score, pattern.frequency, option);
 }
 
-unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> Predictor::CompactInstances(int e, unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set, const vector<int> &query_sequence, unordered_map<PI::PatternInstance, int, boost::hash<PI::PatternInstance>> &final_pi_set, int pattern_offset, int pattern_sz) {
+vector<PatternInstance> Predictor::CompactInstances(int e, vector<PatternInstance> pi_set, const vector<int> &query_sequence, vector<PatternInstance> &final_pi_set, int pattern_offset, int pattern_sz) {
 	
 	pair<int, int> prev_tracker(-1, -1);
-	set<PI::PatternInstance> sorted_pi_set;
+	set<PatternInstance> sorted_pi_set;
 	vector<pair<pair<int, int>, int>> tracker;
 	unordered_set<int> keep;
 
@@ -223,20 +216,14 @@ unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> Predictor::
 			eprev = next_e;
 		}
 		else if(pattern_offset == pattern_sz - 1){
-			final_pi_set[entry] = pattern_offset - 1;
+			final_pi_set.push_back(entry);
 		}
 		++num;
 	}
-	unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> ret;
-
-	num = 0;
-	for (const auto & entry : sorted_pi_set) {
-		if (keep.find(num) != keep.end()) final_pi_set[entry] = pattern_offset - 1;
-		++num;
-	}
+	vector<PatternInstance> ret;
 
 	for (const auto &range_instance : tracker) {
-		ret.insert(PI::PatternInstance(0, range_instance.first.first, range_instance.first.second));
+		ret.push_back(PatternInstance(0, range_instance.first.first, range_instance.first.second));
 	}
 	
 	return ret;

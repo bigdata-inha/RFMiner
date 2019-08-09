@@ -12,8 +12,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <map>
-
-#include <boost/functional/hash.hpp>
+#include <algorithm>
 
 using std::vector;
 using std::pair;
@@ -97,50 +96,29 @@ struct Pattern {
 	}
 };
 
-namespace PI {
-	struct PatternInstance {
-		int sid, l, r;
 
-		PatternInstance()
-			:sid(-1), l(100000), r(100000) {}
+struct PatternInstance {
+	int sid, l, r, ext_len;
+	vector<int> landmark;
 
-		PatternInstance(int a_sid, int a_l, int a_r)
-			:sid(a_sid), l(a_l), r(a_r) {};
+	PatternInstance()
+		:sid(-1), l(100000), r(100000) {}
 
-		bool operator <(const PatternInstance &rhs) const {
-			if (l == rhs.l) return sid < rhs.sid;
-			return l < rhs.l;
+	PatternInstance(int a_sid, int a_l, int a_r)
+		:sid(a_sid), l(a_l), r(a_r) {};
+
+	bool operator <(const PatternInstance &rhs) const {
+		if (l == rhs.l) return sid < rhs.sid;
+		return l < rhs.l;
+	}
+
+	vector<double> GapSequence() {
+		vector<double> gap_sequence;
+		int lsz = static_cast<int>(landmark.size());
+		for (int i = 0; i < lsz - 1; ++i) {
+			gap_sequence.push_back(static_cast<double>(landmark[i + 1] - landmark[i]));
 		}
-	};
-
-	bool operator==(PatternInstance const& a, PatternInstance const& b);
-
-	std::size_t hash_value(PatternInstance const &a);
-}
-
-struct PatternSegment {
-	int l, r, length;
-	PatternSegment(int a_l, int a_r)
-		:l(a_l), r(a_r) {
-		length = r - l;
-	}
-};
-
-struct PatternInstanceSegment {
-	int l, r, length;
-	PatternInstanceSegment(int a_l, int a_r)
-		:l(a_l), r(a_r) {
-		length = r - l;
-	}
-};
-
-struct Segment {
-	PatternSegment ps;
-	PatternInstanceSegment pis;
-	double weight;
-	Segment(PatternSegment a_ps, PatternInstanceSegment a_pis)
-		:ps(a_ps), pis(a_pis) {
-		weight = 1.0 / static_cast<double>(pis.length);
+		return gap_sequence;
 	}
 };
 

@@ -12,7 +12,6 @@
 #include <bitset>
 #include <chrono>
 
-#include <boost/functional/hash.hpp>
 #include "Database.h"
 #include "StructTypes.h"
 

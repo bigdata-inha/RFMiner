@@ -78,7 +78,7 @@ private:
 	int debug_;
 
 	Rule CreateRule(const Pattern &pattern, const vector<int> &query_sequence, int option, const int &repeat);
-	unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> CompactInstances(int e, unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set, const vector<int> &query_sequence, unordered_map<PI::PatternInstance, int, boost::hash<PI::PatternInstance>> &final_pi_set, int pattern_offset, int pattern_sz);
+	vector<PatternInstance> CompactInstances(int e, vector<PatternInstance> pi_set, const vector<int> &query_sequence, vector<PatternInstance> &final_pi_set, int pattern_offset, int pattern_sz);
 };
 
 #endif // !PREDICTOR_H_

@@ -37,7 +37,7 @@ void PatternMiner::Run(double init_threshold, double threshold, int option) {
 
 			// construct initial pattern instance set
 			unordered_set<int> sid_set;
-			unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set;
+			vector<PatternInstance> pi_set;
 			for (const auto &sid : entry.second) {
 				/*
 					Frequency measure does not need multiple pattern instances in a single sequence.
@@ -50,7 +50,7 @@ void PatternMiner::Run(double init_threshold, double threshold, int option) {
 				vector<int> &S = training_sequence_database_[sid].sequence;
 				int sz = static_cast<int>(S.size());
 				for (int i = 0; i < sz; ++i) {
-					if (S[i] == entry.first) pi_set.insert(PI::PatternInstance(sid, i, i));
+					if (S[i] == entry.first) pi_set.push_back(PatternInstance(sid, i, i));
 				}
 			}
 
@@ -149,7 +149,7 @@ unordered_map<int, unordered_set<int>> PatternMiner::ScanCountSingleItemsInit() 
 	return ret;
 }
 
-void PatternMiner::RFGrowth(vector<int> pattern, unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set) {
+void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set) {
 	/*
 		Find all possible candidates events for each sequence.
 		S = [A x x x B o o o o o]
@@ -179,13 +179,15 @@ void PatternMiner::RFGrowth(vector<int> pattern, unordered_set<PI::PatternInstan
 
 	for (const auto &e : candidate_events) {
 		pattern.push_back(e); // P+ <- appending event e to pattern P
-		unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> cur_pi_set = Grow(e, pi_set); // Grow()
+		vector<PatternInstance> cur_pi_set = Grow(e, pi_set); // Grow()
 		
 		vector<double> pattern_gaps;
 		pattern_gaps.resize(pattern_length);
 		double max_upper = 0.0;
 		double support = 0.0;
 		pair<double, double> tmp;
+
+
 
 		if (option_ == 1) {
 			unordered_map<int, pair<vector<double>, double>> compact_gaps;
@@ -197,18 +199,18 @@ void PatternMiner::RFGrowth(vector<int> pattern, unordered_set<PI::PatternInstan
 
 			// for every "pattern instance" in the "current pattern instance set"
 			for (const auto& pattern_instance : cur_pi_set) {
-				const int seq_id = pattern_instance.sid;
-				const int ext_length = training_sequence_database_[seq_id].size() - pattern_instance.r;
+				const int id = pattern_instance.sid;
+				const int ext_length = training_sequence_database_[id].size() - pattern_instance.r;
 
 				// tracking max_length
-				if (max_length_map.find(seq_id) == max_length_map.end()) max_length_map[seq_id] = ext_length;
-				else max_length_map[seq_id] = std::max(max_length_map[seq_id], ext_length);
+				if (max_length_map.find(id) == max_length_map.end()) max_length_map[id] = ext_length;
+				else max_length_map[id] = std::max(max_length_map[id], ext_length);
 
 				double weight = 0.0;
 
 				// copy to pattern instance vector "pi"
 				vector<int> pi;
-				for (int i = pattern_instance.l; i <= pattern_instance.r; ++i) pi.push_back(training_sequence_database_[seq_id][i]);
+				for (int i = pattern_instance.l; i <= pattern_instance.r; ++i) pi.push_back(training_sequence_database_[id][i]);
 				int pisz = static_cast<int>(pi.size());
 
 				// receny measure calculation
@@ -317,7 +319,7 @@ void PatternMiner::RFGrowth(vector<int> pattern, unordered_set<PI::PatternInstan
 }
 
 
-unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> PatternMiner::Grow(int e, unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set) {
+vector<PatternInstance> PatternMiner::Grow(int e, vector<PatternInstance> pi_set) {
 	unordered_set<int> sid_set;
 	unordered_map<int, pair<int, int>> prev_tracker;
 	for (const auto &PI : pi_set) sid_set.insert(PI.sid);
@@ -325,7 +327,7 @@ unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> PatternMine
 		prev_tracker[sid].first = -1;
 		prev_tracker[sid].second = -1;
 	}
-	set<PI::PatternInstance> sorted_pi_set;
+	set<PatternInstance> sorted_pi_set;
 	unordered_map<int, vector<pair<int, int>>> tracker;
 	for (const auto &entry : pi_set) sorted_pi_set.insert(entry);
 	for (const auto &entry : sorted_pi_set) {
@@ -353,16 +355,16 @@ unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> PatternMine
 			eprev = next_e;
 		}
 	}
-	unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> ret;
+	vector<PatternInstance> ret;
 	for (const auto &entry : tracker) {
 		for (const auto &range_instance : entry.second) {
-			ret.insert(PI::PatternInstance(entry.first, range_instance.first, range_instance.second));
+			ret.push_back(PatternInstance(entry.first, range_instance.first, range_instance.second));
 		}
 	}
 	return ret;
 }
 
-pair<double, double> PatternMiner::CalculateWeight(unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set, int pattern_length, int option) {
+pair<double, double> PatternMiner::CalculateWeight(vector<PatternInstance> pi_set, int pattern_length, int option) {
 	if (option == 2) {
 		unordered_map<int, pair<double, double>> tracker;
 		unordered_map<int, pair<double, double>> length_tracker;
@@ -402,8 +404,8 @@ pair<double, double> PatternMiner::CalculateWeight(unordered_set<PI::PatternInst
 }
 
 
-double PatternMiner::UpperBound(unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set, vector<double> pgaps, int pattern_length) {
-	unordered_map<int, pair<PI::PatternInstance, int>> mp;
+double PatternMiner::UpperBound(vector<PatternInstance> pi_set, vector<double> pgaps, int pattern_length) {
+	unordered_map<int, pair<PatternInstance, int>> mp;
 
 	int cnt = 0;
 	for (auto it = pi_set.begin(); it != pi_set.end(); ++it, ++cnt) {
