@@ -97,8 +97,8 @@ void PatternMiner::WritePatternFile(string filename) {
 			for (int j = 0; j < pattern_length; ++j) {
 				line += std::to_string(entry.pattern[j]) + " ";
 			}
-			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency);
-			if (i + 1 != sz) line += "\n";
+			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + "\n";
+			line += std::to_string(entry.gap_sequence.front()) + "\n";
 			outfile << line;
 		}
 	}
@@ -185,6 +185,7 @@ void PatternMiner::RFGrowth(vector<int> pattern, unordered_set<PI::PatternInstan
 		pattern_gaps.resize(pattern_length);
 		double max_upper = 0.0;
 		double support = 0.0;
+		pair<double, double> tmp;
 
 		if (option_ == 1) {
 			unordered_map<int, pair<vector<double>, double>> compact_gaps;
@@ -291,14 +292,19 @@ void PatternMiner::RFGrowth(vector<int> pattern, unordered_set<PI::PatternInstan
 			max_upper /= static_cast<double>(training_sequencde_database_sz_);
 		}
 		else {
-			support = CalculateWeight(cur_pi_set, pattern_length + 1, option_) / static_cast<double>(training_sequencde_database_sz_);
+			tmp = CalculateWeight(cur_pi_set, pattern_length + 1, option_);
+			support = tmp.first / static_cast<double>(training_sequencde_database_sz_);
 		}
 
-		double frequency_support = CalculateWeight(cur_pi_set, pattern_length + 1, 3) / static_cast<double>(training_sequencde_database_sz_);
+		double frequency_support = CalculateWeight(cur_pi_set, pattern_length + 1, 3).first / static_cast<double>(training_sequencde_database_sz_);
 		
 		if (support >= threshold_) {
 			if (option_ == 1) sequential_patterns_.push_back(Pattern(option_, pattern, support, frequency_support, pattern_gaps));
-			else if (option_ == 2) sequential_patterns_.push_back(Pattern(option_, pattern, support, frequency_support, pattern_gaps));
+			else if (option_ == 2) {
+				vector<double> avglen;
+				avglen.push_back(tmp.second);
+				sequential_patterns_.push_back(Pattern(option_, pattern, support, frequency_support, avglen));
+			}
 			else if (option_ == 3) sequential_patterns_.push_back(Pattern(option_, pattern, support, frequency_support));
 			RFGrowth(pattern, cur_pi_set);
 		}
@@ -356,20 +362,28 @@ unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> PatternMine
 	return ret;
 }
 
-double PatternMiner::CalculateWeight(unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set, int pattern_length, int option) {
+pair<double, double> PatternMiner::CalculateWeight(unordered_set<PI::PatternInstance, boost::hash<PI::PatternInstance>> pi_set, int pattern_length, int option) {
 	if (option == 2) {
 		unordered_map<int, pair<double, double>> tracker;
+		unordered_map<int, pair<double, double>> length_tracker;
+
 		for (const auto & entry : pi_set) {
 			int id = entry.sid;
 			double w = static_cast<double>(pattern_length) / static_cast<double>(entry.r - entry.l + 1);
 			tracker[id].first += w;
 			tracker[id].second++;
+			length_tracker[id].first += static_cast<double>(entry.r - entry.l + 1);
+			length_tracker[id].second++;
 		}
 		double ret = 0.0;
+		double len = 0.0;
 		for (const auto & entry : tracker) {
 			ret += (entry.second.first / entry.second.second);
 		}
-		return ret;
+		for (const auto & entry : length_tracker) {
+			len += (entry.second.first / entry.second.second);
+		}
+		return { ret, len/static_cast<double>(length_tracker.size())};
 	}
 	else if (option == 3) {
 		unordered_set<int> vis;
@@ -378,7 +392,7 @@ double PatternMiner::CalculateWeight(unordered_set<PI::PatternInstance, boost::h
 			if (vis.find(id) != vis.end()) continue;
 			vis.insert(id);
 		}
-		return static_cast<double>(vis.size());
+		return { static_cast<double>(vis.size()), static_cast<double>(vis.size()) };
 	}
 	else {
 		printf("Error in option CalculateCompactSupport()\n");
@@ -421,7 +435,7 @@ double PatternMiner::UpperBound(unordered_set<PI::PatternInstance, boost::hash<P
 		}
 		F /= static_cast<double>(training_sequencde_database_sz_);
 
-		int frequency = static_cast<int>(CalculateWeight(pi_set, pattern_length, 3));
+		int frequency = static_cast<int>(CalculateWeight(pi_set, pattern_length, 3).first);
 		return Potential(pattern_length, frequency, max_len);
 	}
 	else if(option_ == 2){

@@ -335,3 +335,7 @@ RFMiner/Tester.cpp
 RFMiner/Tester.h
 RFMiner/TestFunctions.cpp
 RFMiner/TestFunctions.h
+
+RFMiner.sln
+RFMiner.vcxproj
+RFMiner.vcxproj.filters
