@@ -185,9 +185,8 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 		vector<double> pattern_gaps;
 		pattern_gaps.resize(pattern_length);
 		double max_upper = 0.0;
-		double support = 0.0;
-		pair<double, double> tmp;
-		vector<double> pgaps;
+		double interestingness = 0.0;
+		double len = 0.0;
 
 		map<int, double> upper_bound_map;
 		unordered_map<int, int> max_length_map;
@@ -197,8 +196,10 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 			instance.ext_len = training_sequence_database_[id].size()  - 1 - instance.r;
 			
 			// tracking max_length
-			if (max_length_map.find(id) == max_length_map.end()) max_length_map[id] = instance.ext_len;
-			else max_length_map[id] = std::max(max_length_map[id], instance.ext_len);
+			if (instance.ext_len != 0) {
+				if (max_length_map.find(id) == max_length_map.end()) max_length_map[id] = instance.ext_len;
+				else max_length_map[id] = std::max(max_length_map[id], instance.ext_len);
+			}
 
 			int cur = plus_pattern_len - 1;
 			vector<int> &seq = training_sequence_database_[id].sequence;
@@ -209,7 +210,20 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 				}
 			}
 			std::reverse(instance.landmark.begin(), instance.landmark.end());
+		}
 
+		// calculate N_k
+		for (auto it = max_length_map.begin(); it != max_length_map.end(); ++it) {
+			const int ext_length = it->second;
+			upper_bound_map[-ext_length]++;
+		}
+
+		for (auto it = upper_bound_map.begin(); it != upper_bound_map.end(); ++it) {
+			int cnt = it->second;
+			++it;
+			if (it == upper_bound_map.end()) break;
+			it->second += cnt;
+			--it;
 		}
 
 		if (option_ == 1) {
@@ -249,10 +263,6 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 				int sz = static_cast<int>(gaps.size());
 				for (int i = 0; i < sz; ++i) compact_gaps[pattern_instance.sid].first[i] += gaps[i];
 				compact_gaps[pattern_instance.sid].second++;
-
-				double pg = 0.0;
-				for (int i = 0; i < sz; ++i) pg += gaps[i];
-				pgaps.push_back(pg);
 			} // end of iterating all pattern instances
 
 
@@ -267,24 +277,12 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 
 			for (auto &entry : compact_weights) {
 				entry.second.first /= static_cast<double>(entry.second.second);
-				support += entry.second.first;
+				interestingness += entry.second.first;
 			}
 			
-			support /= static_cast<double>(training_sequencde_database_sz_);
+			interestingness /= static_cast<double>(training_sequencde_database_sz_);
 
-			for (auto it = max_length_map.begin(); it != max_length_map.end(); ++it) {
-				const int ext_length = it->second;
-				upper_bound_map[-ext_length]++;
-			}
-
-			for (auto it = upper_bound_map.begin(); it != upper_bound_map.end(); ++it) {
-				int cnt = it->second;
-				++it;
-				if (it == upper_bound_map.end()) break;
-				it->second += cnt;
-				--it;
-			}
-			double P = (double)(pattern_length + 1);
+			double P = (double)(plus_pattern_len);
 			for (const auto &entry : upper_bound_map) {
 				double K = (double)(-entry.first);
 				double N = entry.second;
@@ -298,25 +296,63 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 			max_upper /= static_cast<double>(training_sequencde_database_sz_);
 		}
 		else {
-			tmp = CalculateWeight(cur_pi_set, pattern_length + 1, option_);
-			support = tmp.first / static_cast<double>(training_sequencde_database_sz_);
+			unordered_map<int, pair<double, double>> tracker;
+			unordered_map<int, pair<double, double>> length_tracker;
+
+			double best_len = 100000000.0;
+
+			for (const auto & entry : cur_pi_set) {
+				int id = entry.sid;
+				double w = static_cast<double>(plus_pattern_len) / static_cast<double>(entry.r - entry.l + 1);
+				tracker[id].first += w;
+				tracker[id].second++;
+				best_len = std::min(best_len, static_cast<double>(entry.r - entry.l + 1));
+				length_tracker[id].first += static_cast<double>(entry.r - entry.l + 1);
+				length_tracker[id].second++;
+			}
+			
+			for (const auto & entry : tracker) {
+				interestingness += (entry.second.first / entry.second.second);
+			}
+			for (const auto & entry : length_tracker) {
+				len += (entry.second.first / entry.second.second);
+			}
+
+			len /= static_cast<double>(length_tracker.size());
+			interestingness /= static_cast<double>(training_sequencde_database_sz_);
+
+			double P = (double)(plus_pattern_len);
+			for (const auto &entry : upper_bound_map) {
+				double K = (double)(-entry.first);
+				double N = entry.second;
+				double V = best_len;
+				double a = P + K;
+				double b = V + K;
+				double single_best_val = a / b;
+				max_upper = std::max(max_upper, single_best_val*N);
+			}
+			max_upper /= static_cast<double>(training_sequencde_database_sz_);
 		}
 
-		double frequency_support = CalculateWeight(cur_pi_set, pattern_length + 1, 3).first / static_cast<double>(training_sequencde_database_sz_);
-		
-		if (support >= threshold_) {
-			if (option_ == 1) sequential_patterns_.push_back(Pattern(option_, pattern, support, frequency_support, pattern_gaps));
+		unordered_set<int> vis;
+		for (const auto & entry : pi_set) {
+			int id = entry.sid;
+			if (vis.find(id) != vis.end()) continue;
+			vis.insert(id);
+		}
+		double frequency_support = static_cast<double>(vis.size()) / static_cast<double>(training_sequencde_database_sz_);
+
+		if (interestingness >= threshold_) {
+			if (option_ == 1) sequential_patterns_.push_back(Pattern(option_, pattern, interestingness, frequency_support, pattern_gaps));
 			else if (option_ == 2) {
 				vector<double> avglen;
-				avglen.push_back(tmp.second);
-				sequential_patterns_.push_back(Pattern(option_, pattern, support, frequency_support, avglen));
+				avglen.push_back(len);
+				sequential_patterns_.push_back(Pattern(option_, pattern, interestingness, frequency_support, avglen));
 			}
-			else if (option_ == 3) sequential_patterns_.push_back(Pattern(option_, pattern, support, frequency_support));
 			RFGrowth(pattern, cur_pi_set);
 		}
 		else{
-			if(option_ == 1 && max_upper >= threshold_)RFGrowth(pattern, cur_pi_set);
-			else if (option_ == 2 && UpperBound(cur_pi_set, pgaps, pattern_length + 1) >= threshold_) RFGrowth(pattern, cur_pi_set); // UpperBound function check
+			if(max_upper >= threshold_)RFGrowth(pattern, cur_pi_set);
 		}
 		pattern.pop_back();
 	}
@@ -366,108 +402,6 @@ vector<PatternInstance> PatternMiner::Grow(int e, vector<PatternInstance> pi_set
 		}
 	}
 	return ret;
-}
-
-pair<double, double> PatternMiner::CalculateWeight(vector<PatternInstance> pi_set, int pattern_length, int option) {
-	if (option == 2) {
-		unordered_map<int, pair<double, double>> tracker;
-		unordered_map<int, pair<double, double>> length_tracker;
-
-		for (const auto & entry : pi_set) {
-			int id = entry.sid;
-			double w = static_cast<double>(pattern_length) / static_cast<double>(entry.r - entry.l + 1);
-			tracker[id].first += w;
-			tracker[id].second++;
-			length_tracker[id].first += static_cast<double>(entry.r - entry.l + 1);
-			length_tracker[id].second++;
-		}
-		double ret = 0.0;
-		double len = 0.0;
-		for (const auto & entry : tracker) {
-			ret += (entry.second.first / entry.second.second);
-		}
-		for (const auto & entry : length_tracker) {
-			len += (entry.second.first / entry.second.second);
-		}
-		return { ret, len/static_cast<double>(length_tracker.size())};
-	}
-	else if (option == 3) {
-		unordered_set<int> vis;
-		for (const auto & entry : pi_set) {
-			int id = entry.sid;
-			if (vis.find(id) != vis.end()) continue;
-			vis.insert(id);
-		}
-		return { static_cast<double>(vis.size()), static_cast<double>(vis.size()) };
-	}
-	else {
-		printf("Error in option CalculateCompactSupport()\n");
-		getchar();
-		exit(-1);
-	}
-}
-
-
-double PatternMiner::UpperBound(vector<PatternInstance> pi_set, vector<double> pgaps, int pattern_length) {
-	unordered_map<int, pair<PatternInstance, int>> mp;
-
-	int cnt = 0;
-	for (auto it = pi_set.begin(); it != pi_set.end(); ++it, ++cnt) {
-		int sid = it->sid;
-		int l = it->l;
-		int r = it->r;
-		if (mp.find(sid) == mp.end()) {
-			mp[sid] = { *it, cnt };
-		}
-		else if (l < mp[sid].first.l) {
-			mp[sid] = { *it, cnt };
-		}
-	}
-
-	double F = 0.0;
-	
-	if (option_ == 1) {
-		int max_len = 0;
-
-		for (auto it = mp.begin(); it != mp.end(); ++it) {
-			int sid = it->second.first.sid;
-			int l = it->second.first.l;
-			int r = it->second.first.r;
-			int idx = it->second.second;
-			int sz = static_cast<int>(training_sequence_database_[sid].size());
-			int tl = sz - r;
-			max_len = std::max(max_len, tl);
-			F += (pgaps[idx] + static_cast<double>(tl)) / static_cast<double>(pattern_length - 1 + tl);
-		}
-		F /= static_cast<double>(training_sequencde_database_sz_);
-
-		int frequency = static_cast<int>(CalculateWeight(pi_set, pattern_length, 3).first);
-		return Potential(pattern_length, frequency, max_len);
-	}
-	else if(option_ == 2){
-		for (auto it = mp.begin(); it != mp.end(); ++it) {
-			int sid = it->second.first.sid;
-			int l = it->second.first.l;
-			int r = it->second.first.r;
-			int sz = static_cast<int>(training_sequence_database_[sid].size());
-			int tl = sz - r;
-			F += static_cast<double>(pattern_length - 1 + tl) / static_cast<double>(r - l + tl);
-		}
-		F /= static_cast<double>(training_sequencde_database_sz_);
-	}
-	else {
-		printf("Error in option UpperBound()\n");
-		getchar();
-		exit(-1);
-	}
-	return F;
-}
-
-double PatternMiner::Potential(int pattern_length, int frequency, int max_len) {
-	double l = static_cast<double>(pattern_length);
-	double k = static_cast<double>(max_len);
-	double n = static_cast<double>(frequency);
-	return ((l + k)*threshold_ - k * n / static_cast<double>(training_sequencde_database_sz_)) / l;
 }
 
 void PatternMiner::SetDebug() {
