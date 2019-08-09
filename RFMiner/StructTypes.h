@@ -112,7 +112,7 @@ struct PatternInstance {
 		return l < rhs.l;
 	}
 
-	vector<double> GapSequence() {
+	vector<double> GapSequence() const{
 		vector<double> gap_sequence;
 		int lsz = static_cast<int>(landmark.size());
 		for (int i = 0; i < lsz - 1; ++i) {

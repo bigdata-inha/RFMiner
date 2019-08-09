@@ -165,8 +165,9 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 		}
 	}
 
-	vector<double> pgaps;
-	int pattern_length = static_cast<int>(pattern.size());
+	const int pattern_length = static_cast<int>(pattern.size());
+	const int plus_pattern_len = pattern_length + 1;
+	const int gap_length = pattern_length;
 
 	if (debug_) {
 		printf("Pattern: ");
@@ -186,27 +187,41 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 		double max_upper = 0.0;
 		double support = 0.0;
 		pair<double, double> tmp;
+		vector<double> pgaps;
 
+		map<int, double> upper_bound_map;
+		unordered_map<int, int> max_length_map;
 
+		for (auto& instance : cur_pi_set) {
+			const int id = instance.sid;
+			instance.ext_len = training_sequence_database_[id].size()  - 1 - instance.r;
+			
+			// tracking max_length
+			if (max_length_map.find(id) == max_length_map.end()) max_length_map[id] = instance.ext_len;
+			else max_length_map[id] = std::max(max_length_map[id], instance.ext_len);
+
+			int cur = plus_pattern_len - 1;
+			vector<int> &seq = training_sequence_database_[id].sequence;
+			for (int i = instance.r; i >= instance.l; --i) {
+				if (seq[i] == pattern[cur]) {
+					instance.landmark.push_back(i);
+					--cur;
+				}
+			}
+			std::reverse(instance.landmark.begin(), instance.landmark.end());
+
+		}
 
 		if (option_ == 1) {
 			unordered_map<int, pair<vector<double>, double>> compact_gaps;
 			unordered_map<int, pair<double, double>> compact_weights;
-			map<int, double> upper_bound_map;
-
-			unordered_map<int, int> max_length_map;
+			
 			double best_slice_sum = 100000000.0;
 
 			// for every "pattern instance" in the "current pattern instance set"
 			for (const auto& pattern_instance : cur_pi_set) {
 				const int id = pattern_instance.sid;
-				const int ext_length = training_sequence_database_[id].size() - pattern_instance.r;
-
-				// tracking max_length
-				if (max_length_map.find(id) == max_length_map.end()) max_length_map[id] = ext_length;
-				else max_length_map[id] = std::max(max_length_map[id], ext_length);
-
-				double weight = 0.0;
+				const int ext_length = pattern_instance.ext_len;
 
 				// copy to pattern instance vector "pi"
 				vector<int> pi;
@@ -214,33 +229,22 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 				int pisz = static_cast<int>(pi.size());
 
 				// receny measure calculation
-				vector<double> gaps;
-				int pre = pisz - 1;
-				int cur = pattern_length - 1;
-				for (int i = pisz - 2; i >= 0; --i) {
-					if (pi[i] == pattern[cur]) {
-						if (cur == 0 && i != 0) continue;
-						gaps.push_back(static_cast<double>(pre - i));
-						pre = i;
-						--cur;
-					}
-				}
-				std::reverse(gaps.begin(), gaps.end());
+				vector<double> gaps = pattern_instance.GapSequence();
+				double slice_sum = 0.0;
 
-				int slice_sum = 1;
-				int cur_val = 1;
-				for (int i = gaps.size() - 1; i >= 0; --i) {
-					cur_val += gaps[i];
-					slice_sum += cur_val;
+				int lsz = static_cast<int>(pattern_instance.landmark.size());
+				for (int i = 0; i < lsz; ++i) {
+					slice_sum += static_cast<double>(pattern_instance.landmark.back() - pattern_instance.landmark[i] + 1);
 				}
 
-				best_slice_sum = std::min(best_slice_sum, (double)slice_sum);
+				best_slice_sum = std::min(best_slice_sum, slice_sum);
 
-				compact_weights[pattern_instance.sid].first += (((double)pattern_length + 2.0)*((double)pattern_length + 1.0) / 2.0)/(double)slice_sum;
+				double ppl = static_cast<double>(plus_pattern_len);
+				compact_weights[pattern_instance.sid].first += ((ppl + 1.0)*(ppl) / 2.0)/slice_sum;
 				compact_weights[pattern_instance.sid].second++;
 				
 				if (compact_gaps[pattern_instance.sid].second == 0) {
-					compact_gaps[pattern_instance.sid].first.resize(pattern_length);
+					compact_gaps[pattern_instance.sid].first.resize(gap_length);
 				}
 				int sz = static_cast<int>(gaps.size());
 				for (int i = 0; i < sz; ++i) compact_gaps[pattern_instance.sid].first[i] += gaps[i];
