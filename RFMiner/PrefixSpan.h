@@ -71,7 +71,9 @@ class PrefixSpan{
 public:
 
 	// constructors, destructors, initilizeres -------------------
-	PrefixSpan() {}
+	PrefixSpan() {
+		cnt = 0;
+	}
 	~PrefixSpan() {}
 
 	void clear_training() {
@@ -103,7 +105,8 @@ public:
 	void WriteFile(const string &filename);
 	void WriteQueryFile(const string &filename);
 	// -------------------------------------------------------------
-
+	
+	int cnt;
 private:
 	// Frequency version
 	double frequency_minsup_;

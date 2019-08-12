@@ -1,6 +1,8 @@
 #include "PatternMiner.h"
 
-PatternMiner::PatternMiner() {}
+PatternMiner::PatternMiner() {
+	cnt = 0;
+}
 
 PatternMiner::~PatternMiner() {}
 
@@ -28,6 +30,14 @@ void PatternMiner::Run(double init_threshold, double threshold, int option) {
 	vector<int> pattern;
 	int progress = 0;
 	printf("start");
+
+	for (const auto &entry : inverted_list) {
+		const double single_event_support = static_cast<double>(entry.second.size()) / static_cast<double>(training_sequencde_database_sz_);
+		if (single_event_support >= init_threshold_) {
+			candidate_events.insert(entry.first);
+		}
+	}
+
 	for (const auto &entry : inverted_list) {
 
 		const double support = static_cast<double>(entry.second.size()) / static_cast<double>(training_sequencde_database_sz_);
@@ -155,7 +165,8 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 		S = [A x x x B o o o o o]
 		'o' s are possible condidates
 	*/
-	unordered_set<int> candidate_events;
+	cnt++;
+	/*unordered_set<int> candidate_events;
 	for (const auto &entry : pi_set) {
 		int id = entry.sid;
 		vector<int> &S = training_sequence_database_[id].sequence;
@@ -163,7 +174,7 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 		for (int i = entry.r + 1; i < sz; ++i) {
 			candidate_events.insert(S[i]);
 		}
-	}
+	}*/
 
 	const int pattern_length = static_cast<int>(pattern.size());
 	const int plus_pattern_len = pattern_length + 1;
@@ -295,7 +306,7 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 			}
 			max_upper /= static_cast<double>(training_sequencde_database_sz_);
 		}
-		else {
+		else if(option_ == 2){
 			unordered_map<int, pair<double, double>> tracker;
 			unordered_map<int, pair<double, double>> length_tracker;
 
@@ -333,13 +344,13 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 			}
 			max_upper /= static_cast<double>(training_sequencde_database_sz_);
 		}
-
+	
 		unordered_set<int> vis;
 		for (const auto & entry : pi_set) {
 			int id = entry.sid;
-			if (vis.find(id) != vis.end()) continue;
 			vis.insert(id);
 		}
+		if(option_ == 3) interestingness = static_cast<double>(vis.size()) / static_cast<double>(training_sequencde_database_sz_);
 		double frequency_support = static_cast<double>(vis.size()) / static_cast<double>(training_sequencde_database_sz_);
 
 		if (interestingness >= threshold_) {
@@ -351,7 +362,7 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 			}
 			RFGrowth(pattern, cur_pi_set);
 		}
-		else{
+		else if(option_ != 3){
 			if(max_upper >= threshold_)RFGrowth(pattern, cur_pi_set);
 		}
 		pattern.pop_back();
@@ -367,15 +378,22 @@ vector<PatternInstance> PatternMiner::Grow(int e, vector<PatternInstance> pi_set
 		prev_tracker[sid].first = -1;
 		prev_tracker[sid].second = -1;
 	}
-	set<PatternInstance> sorted_pi_set;
+	//set<PatternInstance> sorted_pi_set;
 	unordered_map<int, vector<pair<int, int>>> tracker;
-	for (const auto &entry : pi_set) sorted_pi_set.insert(entry);
-	for (const auto &entry : sorted_pi_set) {
+	//for (const auto &entry : pi_set) sorted_pi_set.insert(entry);
+
+	for (int pi_id = 0; pi_id < pi_set.size(); ++pi_id) {
+		const auto &entry = pi_set[pi_id];
 		int id = entry.sid;
 		int next_e = -1;
 
 		const vector<int> &S = training_sequence_database_[id].sequence;
+		
 		int sz = static_cast<int>(S.size());
+		if (pi_id + 1 < pi_set.size() && id == pi_set[pi_id + 1].sid) {
+			sz = std::min(sz, pi_set[pi_id + 1].r + 1);
+		}
+
 		for (int i = entry.r + 1; i < sz; ++i) {
 			if (S[i] == e) {
 				next_e = i;
@@ -385,14 +403,14 @@ vector<PatternInstance> PatternMiner::Grow(int e, vector<PatternInstance> pi_set
 
 		if (next_e != -1) {
 			int curs = entry.l;
-			int &sprev = prev_tracker[id].first;
+			/*int &sprev = prev_tracker[id].first;
 			int &eprev = prev_tracker[id].second;
 			if (sprev <= curs && next_e <= eprev) {
 				tracker[id].pop_back();
-			}
+			}*/
 			tracker[id].push_back({ curs, next_e });
-			sprev = curs;
-			eprev = next_e;
+			/*sprev = curs;
+			eprev = next_e;*/
 		}
 	}
 	vector<PatternInstance> ret;

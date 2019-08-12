@@ -20,6 +20,8 @@ public:
 	void WritePatternFile(string filename);
 	void WriteQueryFile(string filename);
 
+	int cnt;
+	unordered_set<int> candidate_events;
 	void SetDebug();
 private:
 	double init_threshold_;;

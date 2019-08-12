@@ -46,6 +46,7 @@ void PrefixSpan::SpanFrequency(const int &pre_item, const double &pre_support, l
 
 	auto inverted_list = FrequencyUtil(pre_pseudoprojected_database, transaction_database);
 
+	cnt++;
 	// for all counted items
 	for (const auto&entry : inverted_list) {
 		const int &item = entry.first;
