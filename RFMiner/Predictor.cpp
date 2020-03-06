@@ -1,4 +1,7 @@
 #include "Predictor.h"
+#define RECENCY 1
+#define COMPACTNESS 2
+#define PRESENCE 3
 
 Predictor::Predictor(vector<Pattern> interesting_patterns)
 	: interesting_patterns_(interesting_patterns) {
@@ -24,12 +27,7 @@ void Predictor::SetTopPatternNumber(int pattern_num_lim) {
 
 void Predictor::GenerateRules(const vector<int> &query_sequence, int option, const int &repeat) {
 	for (int i = 0; i < top_patterns_sz_; ++i) {
-		Rule tmp = CreateRule(top_patterns_[i], query_sequence, option, repeat);
-		
-		/* A valid rule_type is either 1, 2, or 3 */
-		if (tmp.rule_type == 1 || tmp.rule_type == 2 || tmp.rule_type == 3) {
-			rule_list_.push_back(tmp);
-		}
+		rule_list_.push_back(CreateRule(top_patterns_[i], query_sequence, option, repeat));
 	}
 	if (static_cast<int>(rule_list_.size()) > top_patterns_sz_) {
 		printf("rule list size error!");
@@ -109,7 +107,7 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 
 		if (debug_) printf("[%d %d] pattern_offset: %d\n", pi.l, pi.r, last_matched_pattern_offset);
 
-		if (option == 1) {
+		if (option == RECENCY) {
 			double transition_difference = 0.0;
 			double transition_score = -1.0;
 			vector<double> gaps;
@@ -137,6 +135,7 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 			for (int i = 0; i < gap_matches_sz; ++i) {
 				transition_difference += gap_matches[i];
 			}
+			// pattern.interetingness should be confidence
 			transition_score = 1.0 / (transition_difference + 1.0) * pattern.interestingness;
 
 			if (max_transition_score < transition_score) {
@@ -145,7 +144,7 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 				max_score_gaps = gap_matches;
 			}
 		}
-		else if (option == 2) {
+		else if (option == COMPACTNESS) {
 			double ratio_difference = abs(pattern.gap_sequence.front() - static_cast<double>((query_sz - pi.l)));
 			double ratio_score = 1.0 / (ratio_difference + 1.0) * pattern.interestingness;
 			if (max_ratio_score < ratio_score) {
@@ -153,8 +152,8 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 				x = last_matched_pattern_offset;
 			}
 		}
-		else if (option == 3) {
-			double frequency_score = pattern.frequency;
+		else if (option == PRESENCE) {
+			double frequency_score = (pattern.pattern.size() -1) * pattern.frequency;
 			if (max_frequency_score < frequency_score) {
 				max_frequency_score = frequency_score;
 				x = last_matched_pattern_offset;
@@ -182,50 +181,30 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 }
 
 vector<PatternInstance> Predictor::CompactInstances(int e, vector<PatternInstance> pi_set, const vector<int> &query_sequence, vector<PatternInstance> &final_pi_set, int pattern_offset, int pattern_sz) {
-	
-	pair<int, int> prev_tracker(-1, -1);
-	set<PatternInstance> sorted_pi_set;
-	vector<pair<pair<int, int>, int>> tracker;
-	unordered_set<int> keep;
-
-	// sort landmarks in ascending order of the first index
-	for (const auto &entry : pi_set) sorted_pi_set.insert(entry);
-
-	int num = 0;
-	for (const auto &entry : sorted_pi_set) {
-		int next_e = -1;
+	vector<PatternInstance> ret;
+	int pi_set_sz = static_cast<int>(pi_set.size());
+	for (int i = 0; i < pi_set_sz; ++i) {
+		PatternInstance &pi = pi_set[i];
+		const int id = pi.sid;
 
 		int sz = static_cast<int>(query_sequence.size());
-		for (int i = entry.r + 1; i < sz; ++i) {
-			if (query_sequence[i] == e) {
-				next_e = i;
+		if (i + 1 < pi_set_sz) {
+			sz = std::min(sz, pi_set[i + 1].r + 1);
+		}
+
+		bool flag = false;
+		for (int j = pi.r + 1; j < sz; ++j) {
+			if (query_sequence[j] == e) {
+				flag = true;
+				ret.push_back(PatternInstance(id, pi.l, j));
 				break;
 			}
 		}
 
-		if (next_e != -1) {
-			int curs = entry.l;
-			int &sprev = prev_tracker.first;
-			int &eprev = prev_tracker.second;
-			if (sprev <= curs && next_e <= eprev) {
-				keep.insert(tracker.back().second);
-				tracker.pop_back();
-			}
-			tracker.push_back({{ curs, next_e }, num});
-			sprev = curs;
-			eprev = next_e;
+		if (pattern_offset == pattern_sz - 1 && !flag) {
+			final_pi_set.push_back(pi);
 		}
-		else if(pattern_offset == pattern_sz - 1){
-			final_pi_set.push_back(entry);
-		}
-		++num;
 	}
-	vector<PatternInstance> ret;
-
-	for (const auto &range_instance : tracker) {
-		ret.push_back(PatternInstance(0, range_instance.first.first, range_instance.first.second));
-	}
-	
 	return ret;
 }
 

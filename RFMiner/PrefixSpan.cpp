@@ -1,20 +1,52 @@
 #include "Database.h"
 #include "PrefixSpan.h"
 
-// support version -------------------------------------------------------------------------------------------------------------------------------
-void PrefixSpan::RunFrequencyVersion(double frequency_minsup) {
+PrefixSpan::PrefixSpan() { 
+	cnt = 0;
+	naive = 0;
+}
+PrefixSpan::~PrefixSpan(){}
+
+void PrefixSpan::ClearTraining() {
+	frequent_patterns_.clear();
+}
+
+void PrefixSpan::LoadTrainDatabase(vector<Sequence> database) {
+	training_database_ = database;
+	training_database_size_ = static_cast<int>(training_database_.size());
+	double_training_db_sz = static_cast<double>(training_database_size_);
+}
+
+void PrefixSpan::LoadTestDatabase(vector<Sequence> database) {
+	test_database_ = database;
+	test_database_size_ = static_cast<int>(test_database_.size());
+}
+
+vector<Pattern> PrefixSpan::GetFrequentPatterns() {
+	return frequent_patterns_;
+}
+
+vector<unordered_set<int>> PrefixSpan::GetPatternCovers() {
+	return pattern_covers_;
+}
+
+
+void PrefixSpan::Run(double frequency_minsup) {
 	frequency_minsup_ = frequency_minsup;
 	cout << "running on minsup " << frequency_minsup_ << "\n";
 
-	auto inverted_list = ScanCountSingleItemsInit();
-	auto optimized_transaction_db = training_transaction_database_;
+	// Counting
+	unordered_map<int, unordered_set<int>> inverted_list;
+	for (int id = 0; id < training_database_size_; ++id) {
+		for (const auto& item : training_database_[id].sequence) {
+			inverted_list[item].insert(id);
+		}
+	}
 
 	// starting projected_database
-	list<PseudoProjectedDatabaseEntry> init_pseudo_projected_database;
-
-	int sz = static_cast<int>(optimized_transaction_db.size());
-	for (int i = 0; i < sz; ++i) {
-		init_pseudo_projected_database.push_back(PseudoProjectedDatabaseEntry(0, i));
+	vector<PseudoProjectedDatabaseEntry> init_pseudo_projected_database;
+	for (int id = 0; id < training_database_size_; ++id) {
+		init_pseudo_projected_database.push_back(PseudoProjectedDatabaseEntry(0, id));
 	}
 
 	printf("start");
@@ -22,17 +54,27 @@ void PrefixSpan::RunFrequencyVersion(double frequency_minsup) {
 
 	int progress = 0;
 
+	unordered_set<int> candidate_set;
 	for (const auto& entry : inverted_list) {
-		++progress;
 		const int &item = entry.first;
 		const auto &transaction_id_list = entry.second;
-		const double &support = static_cast<double>(transaction_id_list.size()) / static_cast<double>(traing_transaction_database_size_);
+		const double &support = static_cast<double>(transaction_id_list.size()) / double_training_db_sz;
+		if (support >= frequency_minsup_) {
+			candidate_set.insert(item);
+		}
+	}
+
+	for (const auto& entry : candidate_set) {
+		++progress;
+		const int &item = entry;
+		const auto &transaction_id_list = inverted_list[item];
+		const double &support = static_cast<double>(transaction_id_list.size()) / double_training_db_sz;
 
 		if (support >= frequency_minsup_) {
 			pattern.push_back(item);
-			//frequent_patterns_.push_back(Pattern(vector<int>(pattern), support));
-			auto pseudoprojected_database = BuilProjectedDatabaseFrequency(item, init_pseudo_projected_database, transaction_id_list, optimized_transaction_db);
-			SpanFrequency(item, support, pseudoprojected_database, optimized_transaction_db, pattern, 1);
+			//frequent_patterns_.push_back(Pattern(3, vector<int>(pattern), support, support));
+			auto pseudoprojected_database = BuilProjectedDatabase(item, init_pseudo_projected_database);
+			Span(pattern, pseudoprojected_database);
 			pattern.pop_back();
 			printf("\r%.2lf complete", 100.0*((double)(progress)) / static_cast<double>(inverted_list.size()));
 		}
@@ -41,79 +83,51 @@ void PrefixSpan::RunFrequencyVersion(double frequency_minsup) {
 	cout << "\rNumber of frequent patterns: " << static_cast<int>(frequent_patterns_.size()) << "\n";
 }
 
-void PrefixSpan::SpanFrequency(const int &pre_item, const double &pre_support, list<PseudoProjectedDatabaseEntry> &pre_pseudoprojected_database, const vector<Sequence>& transaction_database, vector<int>&pattern, const int &depth) {
+void PrefixSpan::Span(vector<int>pattern, vector<PseudoProjectedDatabaseEntry> &pre_pseudoprojected_database) {
 
+	// Counting from projected database
+	unordered_map<int, unordered_set<int>> inverted_list;
+	unordered_set<int> candidate_set;
 
-	auto inverted_list = FrequencyUtil(pre_pseudoprojected_database, transaction_database);
+	for (auto it = pre_pseudoprojected_database.begin(); it != pre_pseudoprojected_database.end(); ++it) {
+		int offset = it->l;
+		int sid = it->id;
+		vector<int> &S = training_database_[sid].sequence;
+		int sz = static_cast<int>(S.size());
+		for (int i = offset; i < sz; ++i) {
+			inverted_list[S[i]].insert(sid); // this stops counting repeated items cuz set DT.
+			double a = static_cast<double>(inverted_list[S[i]].size());
+			double support = a / double_training_db_sz;
+			if (support >= frequency_minsup_) candidate_set.insert(S[i]);
+		}
+	}
 
 	cnt++;
 	// for all counted items
-	for (const auto&entry : inverted_list) {
-		const int &item = entry.first;
-		const auto &transaction_id_list = entry.second;
-		const double &support = static_cast<double>(transaction_id_list.size()) / static_cast<double>(traing_transaction_database_size_);
-	
-		if (support >= frequency_minsup_) {
-			pattern.push_back(item);
-			frequent_patterns_.push_back(Pattern(3, vector<int>(pattern), support, support));
-			auto pseudoprojected_database = BuilProjectedDatabaseFrequency(item, pre_pseudoprojected_database, transaction_id_list, transaction_database);
-			SpanFrequency(item, support, pseudoprojected_database, transaction_database, pattern, depth + 1);
-			pattern.pop_back();
-		}
-	}
-}
-
-
-unordered_map<int, unordered_set<int>> PrefixSpan::ScanCountSingleItemsInit() {
-	unordered_map<int, unordered_set<int>> ret;
-	
-	for (int i = 0; i < traing_transaction_database_size_; ++i) {
-		for (const auto& item : training_transaction_database_[i].sequence) {
-			ret[item].insert(i);
-		}
-	}
-	return ret;
-}
-
-unordered_map<int, unordered_set<int>> PrefixSpan::FrequencyUtil(const list<PseudoProjectedDatabaseEntry> &cur_pseudoprojected_database, const vector<Sequence>& transaction_database) {
-	unordered_map<int, unordered_set<int>> ret;
-	for (auto it = cur_pseudoprojected_database.begin(); it != cur_pseudoprojected_database.end(); ++it) {
-		int offset = it->offset;
-		int sid = it->transaction_id;
-		for (int i = offset; i < transaction_database[sid].sequence.size(); ++i) {
-			ret[transaction_database[sid].sequence[i]].insert(sid); // this stops counting repeated items cuz set DT.
-		}
-	}
-	return ret;
-}
-
-vector<Sequence> PrefixSpan::CreateOptimizedTransactionDB(unordered_map<int, unordered_set<int>> &inverted_list) {
-	vector<Sequence> ret;
-	for (const auto& entry : training_transaction_database_) {
-		int sequence_id = entry.sequence_id;
-		vector<int> optimized_sequence;
-		for (const auto& item : entry.sequence) {
-			if (static_cast<int>(inverted_list[item].size()) >= frequency_minsup_) {
-				optimized_sequence.push_back(item);
-			}
-		}
-		if (optimized_sequence.empty()) continue;
-		ret.push_back(Sequence(sequence_id, optimized_sequence));
-	}
-	return ret;
-}
-
-
-list<PseudoProjectedDatabaseEntry> PrefixSpan::BuilProjectedDatabaseFrequency(const int &item, const list<PseudoProjectedDatabaseEntry> &cur_pseudoprojected_database, const unordered_set<int>& sidset, const vector<Sequence>& transaction_database) {
-	list<PseudoProjectedDatabaseEntry> ret;
-
-	for (auto it = cur_pseudoprojected_database.begin(); it != cur_pseudoprojected_database.end(); ++it) {
-		int offset = it->offset;
-		int transaction_id = it->transaction_id;
-
-		if (sidset.find(transaction_id) == sidset.end()) continue;
+	for (const auto&entry : candidate_set) {
+		const int &item = entry;
+		const auto &id_list = inverted_list[item];
+		const double support = static_cast<double>(inverted_list[entry].size())/double_training_db_sz;
 		
-		auto &transaction = transaction_database[transaction_id].sequence;
+		pattern.push_back(item);
+		frequent_patterns_.push_back(Pattern(3, vector<int>(pattern), support, support));
+		if(naive) pattern_covers_.push_back(inverted_list[entry]);
+		auto pseudoprojected_database = BuilProjectedDatabase(item, pre_pseudoprojected_database);
+		Span(pattern, pseudoprojected_database);
+		pattern.pop_back();
+		
+	}
+}
+
+
+vector<PseudoProjectedDatabaseEntry> PrefixSpan::BuilProjectedDatabase(const int item, const vector<PseudoProjectedDatabaseEntry> &cur_pseudoprojected_database) {
+	vector<PseudoProjectedDatabaseEntry> ret;
+
+	for (auto it = cur_pseudoprojected_database.begin(); it != cur_pseudoprojected_database.end(); ++it) {
+		int offset = it->l;
+		int transaction_id = it->id;
+		
+		auto &transaction = training_database_[transaction_id].sequence;
 		int transaction_length = static_cast<int>(transaction.size());
 		for (int i = offset; i < transaction_length; ++i) {
 			if (transaction[i] == item) {
@@ -125,7 +139,7 @@ list<PseudoProjectedDatabaseEntry> PrefixSpan::BuilProjectedDatabaseFrequency(co
 	return ret;
 }
 
-void PrefixSpan::WriteFile(const string &filename) {
+void PrefixSpan::WriteFile(const string filename) {
 	ofstream outfile(filename);
 	if (frequent_patterns_.empty()) return;
 	sort(frequent_patterns_.begin(), frequent_patterns_.end());
@@ -182,7 +196,7 @@ void PrefixSpan::WriteFile(const string &filename) {
 	}
 }
 
-void PrefixSpan::WriteQueryFile(const string &filename) {
+void PrefixSpan::WriteQueryFile(const string filename) {
 	unordered_map<int, unordered_set<int>> inverted_list;
 	for (int i = 0; i < test_database_size_; ++i) {
 		for (const auto& item : test_database_[i].sequence) {

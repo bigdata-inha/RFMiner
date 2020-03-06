@@ -98,14 +98,35 @@ struct Pattern {
 
 
 struct PatternInstance {
-	int sid, l, r, ext_len;
+	int sid, l, r, ext_len, type;
 	vector<int> landmark;
+	double value, denom;
 
 	PatternInstance()
 		:sid(-1), l(100000), r(100000) {}
 
 	PatternInstance(int a_sid, int a_l, int a_r)
 		:sid(a_sid), l(a_l), r(a_r) {};
+
+	PatternInstance(int a_type, int a_sid, int a_l, int a_r, int a_ext_len, vector<int> a_landmark)
+		:type(a_type), sid(a_sid), l(a_l), r(a_r), ext_len(a_ext_len), landmark(a_landmark){
+		int sz = static_cast<int>(landmark.size());
+		double nominator = 0.0;
+		double denominator = 0.0;
+
+		if (type == 1) {
+			for (int i = 0; i < sz; ++i) {
+				nominator += static_cast<double>((i + 1));
+				denominator += static_cast<double>((landmark.back() - landmark[i] + 1));
+			}
+		}
+		else if (type == 2) {
+			nominator = static_cast<double>(landmark.size());
+			denominator = static_cast<double>((landmark.back() - landmark.front() + 1));
+		}
+		denom = denominator;
+		value = nominator / denominator;
+	};
 
 	bool operator <(const PatternInstance &rhs) const {
 		if (l == rhs.l) return sid < rhs.sid;

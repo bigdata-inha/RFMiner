@@ -21,13 +21,15 @@ public:
 	void WriteQueryFile(string filename);
 
 	int cnt;
-	unordered_set<int> candidate_events;
 	void SetDebug();
+	int efficient_upperbound;
 private:
 	double init_threshold_;;
 	double threshold_;
+	unordered_set<int> candidate_events_;
 
 	int training_sequencde_database_sz_;
+	double double_training_db_sz;
 	vector<Sequence> training_sequence_database_;
 
 	int test_sequence_database_sz_;
@@ -36,15 +38,12 @@ private:
 	vector<Pattern> sequential_patterns_;
 
 	int option_;
-
 	int debug_;
 
-	unordered_map<int, unordered_set<int>> ScanCountSingleItemsInit();
 	void RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set);
-	vector<PatternInstance> Grow(int e, vector<PatternInstance> pi_set);
-	pair<double, double> CalculateWeight(vector<PatternInstance> pi_set, int pattern_length, int option);
-	double UpperBound(vector<PatternInstance> pi_set, vector<double> pgaps, int pattern_length);
-	double Potential(int pattern_length, int frequency, int max_len);
+	unordered_map<int, vector<PatternInstance>> GrowNew(vector<PatternInstance> pi_set, int last_event, unordered_map<int, unordered_map<int, int>> &max_length_map, unordered_map<int, double> &min_instance, unordered_map<int, unordered_set<int>> &inverted_list);
+	double UpperBound(double plus_pattern_len, unordered_map<int, int > max_length_map, double min_instance);
+
 };
 
 #endif // !PATTERNMINER_H_
