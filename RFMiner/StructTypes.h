@@ -25,6 +25,10 @@ using std::ofstream;
 using std::ifstream;
 using std::map;
 
+#define RECENCY 1
+#define COMPACTNESS 2
+#define PRESENCE 3
+
 struct Sequence {
 	int sequence_id;
 	vector<int> sequence;

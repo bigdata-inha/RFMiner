@@ -35,11 +35,11 @@ struct Rule {
 	}
 
 	bool operator<(const Rule &rhs) const {
-		if (rule_type == 1)
+		if (rule_type == RECENCY)
 			return transition_score > rhs.transition_score;
-		else if (rule_type == 2)
+		else if (rule_type == COMPACTNESS)
 			return ratio_score > rhs.ratio_score;
-		else if (rule_type == 3)
+		else if (rule_type == PRESENCE)
 			return frequency_score > rhs.frequency_score;
 	}
 };

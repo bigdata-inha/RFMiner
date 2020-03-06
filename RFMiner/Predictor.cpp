@@ -1,7 +1,4 @@
 #include "Predictor.h"
-#define RECENCY 1
-#define COMPACTNESS 2
-#define PRESENCE 3
 
 Predictor::Predictor(vector<Pattern> interesting_patterns)
 	: interesting_patterns_(interesting_patterns) {
