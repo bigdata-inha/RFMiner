@@ -145,9 +145,9 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 	const int gap_length = pattern_length;
 
 	if (debug_) {
-		printf("Pattern: ");
+		printf("Before Pattern: <");
 		for (int i = 0; i < pattern.size(); ++i) printf("%d ", pattern[i]);
-		printf("\n");
+		printf(">\n");
 		/*for (const auto &entry : pi_set) {
 			printf("[%d %d]\n", entry.l, entry.r);
 		}*/
@@ -164,6 +164,12 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 		pattern.push_back(e); // P+ <- appending event e to pattern P
 		vector<PatternInstance> cur_pi_set = entry.second; // Grow()
 		
+		if (debug_) {
+			printf("Current Pattern: <");
+			for (int i = 0; i < pattern.size(); ++i) printf("%d ", pattern[i]);
+			printf(">\n");
+		}
+
 		vector<double> pattern_gaps;
 		pattern_gaps.resize(pattern_length);
 		double interestingness = 0.0;

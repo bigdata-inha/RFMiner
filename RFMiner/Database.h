@@ -29,6 +29,18 @@ public:
 	bool isEmpty() { return tfidf_.empty(); }
 	void WriteTfIdfTable(const string &filename);
 
+	void printDatabase() {
+		int num = 1;
+		for (Sequence &s : sequence_database_) {
+			printf("%d: ", num++);
+			for (int i = 0; i < s.size(); ++i) {
+				if(s[i] >= 100) printf("x ");
+				else printf("%c ", 'A' + s[i] - 1);
+			}
+			printf("\n");
+		}
+	}
+
 private:
 	struct HASH {
 		size_t operator()(const pair<int, int>&x)const {
