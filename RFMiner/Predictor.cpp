@@ -90,14 +90,13 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 	// If there is no match
 	if (final_pi_set.empty()) return Rule(0);
 
-
-
 	double max_transition_score = -1.0;
 	double max_ratio_score = -1.0;
 	double max_frequency_score = -1.0;
 	int x = -1;
 	vector<double> max_score_gaps;
 	
+	//assert(final_pi_set.size() == 1);
 	for (const auto &pi : final_pi_set) {
 		const int &last_matched_pattern_offset = pattern_sz - 2;
 
@@ -134,7 +133,7 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 			for (int i = 0; i < gap_matches_sz; ++i) {
 				transition_difference += gap_matches[i];
 			}
-			// pattern.interetingness should be confidence
+			// pattern.interetingness should be replaced to confidence
 			transition_score = 1.0 / (transition_difference + 1.0) * pattern.confidence;
 
 			if (max_transition_score < transition_score) {
@@ -171,11 +170,10 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 	vector<double> consequent_gap;
 	vector<double> query_gap;
 
-	// last matched pattern offset is doing it wrong maybe
-	for (int i = 0; i < pattern_sz; ++i) {
-		if (i <= x) precedent.push_back(pattern_sequence[i]);
-		else consequent.push_back(pattern_sequence[i]);
-	}
+	// Push [1:|P| - 1] to precedent
+	for (int i = 0; i < pattern_sz - 1; ++i) precedent.push_back(pattern_sequence[i]);
+	// Push the last element of P to consequent
+	consequent.push_back(pattern_sequence.back());
 
 	return Rule(precedent, consequent, max_score_gaps, max_transition_score, max_ratio_score, max_frequency_score, pattern.frequency, option);
 }
@@ -201,6 +199,8 @@ vector<PatternInstance> Predictor::CompactInstances(int e, vector<PatternInstanc
 			}
 		}
 
+		// if we have looked for the last element in the pattern, but failed to find it,
+		// then the query string contains the prefix[1:|P| - 1] of the pattern, and not the whole pattern [1: |P|]
 		if (pattern_offset == pattern_sz - 1 && !flag) {
 			final_pi_set.push_back(pi);
 		}

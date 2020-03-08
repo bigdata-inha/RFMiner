@@ -13,6 +13,7 @@
 #include <ctime>
 #include <map>
 #include <algorithm>
+#include <assert.h>
 
 using std::vector;
 using std::pair;
