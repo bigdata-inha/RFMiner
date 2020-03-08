@@ -24,7 +24,9 @@ void Predictor::SetTopPatternNumber(int pattern_num_lim) {
 
 void Predictor::GenerateRules(const vector<int> &query_sequence, int option, const int &repeat) {
 	for (int i = 0; i < top_patterns_sz_; ++i) {
-		rule_list_.push_back(CreateRule(top_patterns_[i], query_sequence, option, repeat));
+		Rule r = CreateRule(top_patterns_[i], query_sequence, option, repeat);
+		if (r.rule_type == EMPTY) continue;
+		rule_list_.push_back(r);
 	}
 	if (static_cast<int>(rule_list_.size()) > top_patterns_sz_) {
 		printf("rule list size error!");
@@ -133,7 +135,7 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 				transition_difference += gap_matches[i];
 			}
 			// pattern.interetingness should be confidence
-			transition_score = 1.0 / (transition_difference + 1.0) * pattern.interestingness;
+			transition_score = 1.0 / (transition_difference + 1.0) * pattern.confidence;
 
 			if (max_transition_score < transition_score) {
 				max_transition_score = transition_score;
@@ -143,14 +145,14 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 		}
 		else if (option == COMPACTNESS) {
 			double ratio_difference = abs(pattern.gap_sequence.front() - static_cast<double>((query_sz - pi.l)));
-			double ratio_score = 1.0 / (ratio_difference + 1.0) * pattern.interestingness;
+			double ratio_score = 1.0 / (ratio_difference + 1.0) * pattern.confidence;
 			if (max_ratio_score < ratio_score) {
 				max_ratio_score = ratio_score;
 				x = last_matched_pattern_offset;
 			}
 		}
 		else if (option == PRESENCE) {
-			double frequency_score = (pattern.pattern.size() -1) * pattern.frequency;
+			double frequency_score = (pattern.pattern.size() -1) * pattern.confidence;
 			if (max_frequency_score < frequency_score) {
 				max_frequency_score = frequency_score;
 				x = last_matched_pattern_offset;
@@ -169,6 +171,7 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 	vector<double> consequent_gap;
 	vector<double> query_gap;
 
+	// last matched pattern offset is doing it wrong maybe
 	for (int i = 0; i < pattern_sz; ++i) {
 		if (i <= x) precedent.push_back(pattern_sequence[i]);
 		else consequent.push_back(pattern_sequence[i]);

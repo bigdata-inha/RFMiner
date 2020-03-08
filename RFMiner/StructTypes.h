@@ -25,6 +25,7 @@ using std::ofstream;
 using std::ifstream;
 using std::map;
 
+#define EMPTY 0
 #define RECENCY 1
 #define COMPACTNESS 2
 #define PRESENCE 3
@@ -57,6 +58,8 @@ struct Pattern {
 	double frequency;
 	int type;
 
+	double confidence;
+
 	Pattern(int a_type, vector<int> a_pattern, double a_interestingness, double a_frequency)
 		: type(a_type), pattern(a_pattern), interestingness(a_interestingness), frequency(a_frequency) {
 	}
@@ -65,15 +68,16 @@ struct Pattern {
 		: type(a_type), pattern(a_pattern), interestingness(a_interestingness), frequency(a_frequency), gap_sequence(a_gap_sequence) {
 	}
 
+	Pattern(int a_type, vector<int> a_pattern, double a_interestingness, double a_frequency, double a_confidence)
+		: type(a_type), pattern(a_pattern), interestingness(a_interestingness), frequency(a_frequency), confidence(a_confidence) {
+	}
+
+	Pattern(int a_type, vector<int> a_pattern, double a_interestingness, double a_frequency, vector<double> a_gap_sequence, double a_confidence)
+		: type(a_type), pattern(a_pattern), interestingness(a_interestingness), frequency(a_frequency), gap_sequence(a_gap_sequence), confidence(a_confidence) {
+	}
+
 	bool operator <(const Pattern &rhs) const {
-		if (type == 1 || type ==2 || type == 3) {
-			return interestingness > rhs.interestingness;
-		}
-		else {
-			printf("Error in pattern type.");
-			getchar();
-			exit(-1);
-		}
+		return interestingness > rhs.interestingness;
 	}
 
 	void PrintPattern() {

@@ -74,7 +74,7 @@ void PrefixSpan::Run(double frequency_minsup) {
 			pattern.push_back(item);
 			//frequent_patterns_.push_back(Pattern(3, vector<int>(pattern), support, support));
 			auto pseudoprojected_database = BuilProjectedDatabase(item, init_pseudo_projected_database);
-			Span(pattern, pseudoprojected_database);
+			Span(pattern, pseudoprojected_database, support);
 			pattern.pop_back();
 			printf("\r%.2lf complete", 100.0*((double)(progress)) / static_cast<double>(inverted_list.size()));
 		}
@@ -83,7 +83,7 @@ void PrefixSpan::Run(double frequency_minsup) {
 	cout << "\rNumber of frequent patterns: " << static_cast<int>(frequent_patterns_.size()) << "\n";
 }
 
-void PrefixSpan::Span(vector<int>pattern, vector<PseudoProjectedDatabaseEntry> &pre_pseudoprojected_database) {
+void PrefixSpan::Span(vector<int>pattern, vector<PseudoProjectedDatabaseEntry> &pre_pseudoprojected_database, double pre_support) {
 
 	// Counting from projected database
 	unordered_map<int, unordered_set<int>> inverted_list;
@@ -108,12 +108,13 @@ void PrefixSpan::Span(vector<int>pattern, vector<PseudoProjectedDatabaseEntry> &
 		const int &item = entry;
 		const auto &id_list = inverted_list[item];
 		const double support = static_cast<double>(inverted_list[entry].size())/double_training_db_sz;
-		
+		const double confidence = support / pre_support;
+
 		pattern.push_back(item);
-		frequent_patterns_.push_back(Pattern(3, vector<int>(pattern), support, support));
+		frequent_patterns_.push_back(Pattern(3, vector<int>(pattern), support, support, confidence));
 		if(naive) pattern_covers_.push_back(inverted_list[entry]);
 		auto pseudoprojected_database = BuilProjectedDatabase(item, pre_pseudoprojected_database);
-		Span(pattern, pseudoprojected_database);
+		Span(pattern, pseudoprojected_database, support);
 		pattern.pop_back();
 		
 	}
@@ -184,7 +185,7 @@ void PrefixSpan::WriteFile(const string filename) {
 			for (int j = 0; j < pattern_length; ++j) {
 				line += std::to_string(entry.pattern[j]) + " ";
 			}
-			line += "-1 " + std::to_string(entry.frequency);
+			line += "-1 " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence);
 			if (i + 1 != sz) line += "\n";
 			outfile << line;
 		}
@@ -195,6 +196,27 @@ void PrefixSpan::WriteFile(const string filename) {
 		exit(-1);
 	}
 }
+
+void PrefixSpan::WriteFile2(const string filename) {
+	ofstream outfile(filename);
+	if (frequent_patterns_.empty()) return;
+	sort(frequent_patterns_.begin(), frequent_patterns_.end());
+	int sz = static_cast<int>(frequent_patterns_.size());
+	for (int i = 0; i < sz; ++i) {
+		const auto &entry = frequent_patterns_[i];
+		int pattern_length = static_cast<int>(entry.pattern.size());
+		string line;
+		for (int j = 0; j < pattern_length; ++j) {
+			line += std::to_string(entry.pattern[j]) + " ";
+		}
+		line += "-1 " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence);
+		if (i + 1 != sz) line += "\n";
+		outfile << line;
+	}
+	
+}
+
+
 
 void PrefixSpan::WriteQueryFile(const string filename) {
 	unordered_map<int, unordered_set<int>> inverted_list;

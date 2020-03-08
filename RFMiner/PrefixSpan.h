@@ -50,9 +50,11 @@ public:
 	vector<unordered_set<int>> GetPatternCovers();
 
 	void Run(double frequency_minsup);
-	void Span(vector<int> pattern, vector<PseudoProjectedDatabaseEntry> &pre_pseudoprojected_database);
+	void Span(vector<int> pattern, vector<PseudoProjectedDatabaseEntry> &pre_pseudoprojected_database, double pre_support);
 
 	void WriteFile(const string filename);
+	void WriteFile2(const string filename);
+
 	void WriteQueryFile(const string filename);
 	
 	int cnt;

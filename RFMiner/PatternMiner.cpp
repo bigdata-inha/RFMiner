@@ -51,7 +51,8 @@ void PatternMiner::Run(double init_threshold, double threshold, int option) {
 	for (const int e : candidate_events_) {
 		vector<PatternInstance> pi_set = item2pattern_instances[e];
 		pattern.push_back(e);
-		RFGrowth(pattern, pi_set);
+		const double single_event_support = static_cast<double>(inverted_list[e].size()) / double_training_db_sz;
+		RFGrowth(pattern, pi_set, single_event_support);
 		pattern.pop_back();
 		progress++;
 		printf("\r%.2lf complete", 100.0*(progress) / static_cast<double>(candidate_events_.size()));
@@ -63,6 +64,63 @@ void PatternMiner::Run(double init_threshold, double threshold, int option) {
 vector<Pattern> PatternMiner::GetSequentialPatterns() {
 	return sequential_patterns_;
 }
+
+//void PatternMiner::WritePatternFile(string filename) {
+//	ofstream outfile(filename);
+//	if (sequential_patterns_.empty()) return;
+//	sort(sequential_patterns_.begin(), sequential_patterns_.end());
+//	if (sequential_patterns_[0].type == 1) {
+//		int sz = static_cast<int>(sequential_patterns_.size());
+//		for (int i = 0; i < sz; ++i) {
+//			const auto &entry = sequential_patterns_[i];
+//			int pattern_length = static_cast<int>(entry.pattern.size());
+//			string line;
+//			for (int j = 0; j < pattern_length; ++j) {
+//				line += std::to_string(entry.pattern[j]) + " ";
+//			}
+//			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + "\n";
+//			for (int j = 0; j < pattern_length - 1; ++j) {
+//				line += std::to_string(entry.gap_sequence[j]);
+//				if (j + 1 != pattern_length - 1) line += " ";
+//			}
+//			if (i + 1 != sz) line += "\n";
+//			outfile << line;
+//		}
+//	}
+//	else if (sequential_patterns_[0].type == 2) {
+//		int sz = static_cast<int>(sequential_patterns_.size());
+//		for (int i = 0; i < sz; ++i) {
+//			const auto &entry = sequential_patterns_[i];
+//			int pattern_length = static_cast<int>(entry.pattern.size());
+//			string line;
+//			for (int j = 0; j < pattern_length; ++j) {
+//				line += std::to_string(entry.pattern[j]) + " ";
+//			}
+//			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + "\n";
+//			line += std::to_string(entry.gap_sequence.front()) + "\n";
+//			outfile << line;
+//		}
+//	}
+//	else if (sequential_patterns_[0].type == 3) {
+//		int sz = static_cast<int>(sequential_patterns_.size());
+//		for (int i = 0; i < sz; ++i) {
+//			const auto &entry = sequential_patterns_[i];
+//			int pattern_length = static_cast<int>(entry.pattern.size());
+//			string line;
+//			for (int j = 0; j < pattern_length; ++j) {
+//				line += std::to_string(entry.pattern[j]) + " ";
+//			}
+//			line += "-1 " + std::to_string(entry.frequency);
+//			if (i + 1 != sz) line += "\n";
+//			outfile << line;
+//		}
+//	}
+//	else {
+//		printf("Error in type: WriteFile()\n");
+//		getchar();
+//		exit(-1);
+//	}
+//}
 
 void PatternMiner::WritePatternFile(string filename) {
 	ofstream outfile(filename);
@@ -77,7 +135,7 @@ void PatternMiner::WritePatternFile(string filename) {
 			for (int j = 0; j < pattern_length; ++j) {
 				line += std::to_string(entry.pattern[j]) + " ";
 			}
-			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + "\n";
+			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence) + "\n";
 			for (int j = 0; j < pattern_length - 1; ++j) {
 				line += std::to_string(entry.gap_sequence[j]);
 				if (j + 1 != pattern_length - 1) line += " ";
@@ -95,29 +153,10 @@ void PatternMiner::WritePatternFile(string filename) {
 			for (int j = 0; j < pattern_length; ++j) {
 				line += std::to_string(entry.pattern[j]) + " ";
 			}
-			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + "\n";
+			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence) + "\n";
 			line += std::to_string(entry.gap_sequence.front()) + "\n";
 			outfile << line;
 		}
-	}
-	else if (sequential_patterns_[0].type == 3) {
-		int sz = static_cast<int>(sequential_patterns_.size());
-		for (int i = 0; i < sz; ++i) {
-			const auto &entry = sequential_patterns_[i];
-			int pattern_length = static_cast<int>(entry.pattern.size());
-			string line;
-			for (int j = 0; j < pattern_length; ++j) {
-				line += std::to_string(entry.pattern[j]) + " ";
-			}
-			line += "-1 " + std::to_string(entry.frequency);
-			if (i + 1 != sz) line += "\n";
-			outfile << line;
-		}
-	}
-	else {
-		printf("Error in type: WriteFile()\n");
-		getchar();
-		exit(-1);
 	}
 }
 
@@ -137,7 +176,7 @@ void PatternMiner::WriteQueryFile(string filename) {
 }
 
 
-void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set) {
+void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set, double pre_interesting) {
 	cnt++;
 
 	const int pattern_length = static_cast<int>(pattern.size());
@@ -233,20 +272,23 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set)
 		if(option_ == 3) interestingness = static_cast<double>(vis.size()) / static_cast<double>(training_sequencde_database_sz_);
 		double frequency_support = static_cast<double>(vis.size()) / static_cast<double>(training_sequencde_database_sz_);
 
+		double confidence = interestingness / pre_interesting;
+		double max1_confidence = confidence < 1.0 ? confidence : 1.0;
+
 		if (interestingness >= threshold_) {
-			if (option_ == 1) sequential_patterns_.push_back(Pattern(option_, pattern, interestingness, frequency_support, pattern_gaps));
+			if (option_ == 1) sequential_patterns_.push_back(Pattern(option_, pattern, interestingness, frequency_support, pattern_gaps, confidence));
 			else if (option_ == 2) {
 				vector<double> avglen;
 				avglen.push_back(len);
-				sequential_patterns_.push_back(Pattern(option_, pattern, interestingness, frequency_support, avglen));
+				sequential_patterns_.push_back(Pattern(option_, pattern, interestingness, frequency_support, avglen, confidence));
 			}
-			RFGrowth(pattern, cur_pi_set);
+			RFGrowth(pattern, cur_pi_set, interestingness);
 		}
 		else if(option_ != 3){
 			double upper_bound;
 			if (!efficient_upperbound) upper_bound = frequency_support;
 			else upper_bound = UpperBound(static_cast<double>(plus_pattern_len), max_length_map[e], min_instance[e]);
-			if(upper_bound >= threshold_)RFGrowth(pattern, cur_pi_set);
+			if(upper_bound >= threshold_)RFGrowth(pattern, cur_pi_set, interestingness);
 		}
 		pattern.pop_back();
 	}
