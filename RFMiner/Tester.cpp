@@ -149,24 +149,36 @@ vector<Pattern> Tester::LoadFrequentPatterns(const string &filename, const int o
 }
 
 
-vector<pair<vector<int>, double>> Tester::load_frequent_set(const string& filename, const string &option) {
+vector<Pattern> Tester::LoadFrequentPatterns(const string &filename, const int option) {
 	ifstream infile(filename);
-	vector<pair<vector<int>, double>> ret;
+	vector<Pattern> ret;
 	int x;
 	double y;
 	double frequency;
+	double confidence;
+	int pattern_id = 0;
 	vector<int> vec;
 	while (infile >> x) {
 		if (x == -1) {
 			infile >> y;
-			infile >> frequency;
+			if (option != 3) infile >> frequency;
+			infile >> confidence;
+			vector<double> tmp_weights;
 			double weight;
-			if (option == "Transition") {
+			if (option == 1) {
 				for (int i = 0; i < vec.size() - 1; ++i) {
 					infile >> weight;
+					tmp_weights.push_back(weight);
 				}
 			}
-			ret.push_back({ vec, y });
+			else if (option == 2) {
+				infile >> weight;
+				tmp_weights.push_back(weight);
+			}
+			if (option == 1)ret.push_back(Pattern(option, vec, y, frequency, tmp_weights, confidence));
+			else if (option == 2) ret.push_back(Pattern(option, vec, y, frequency, tmp_weights, confidence));
+			else if (option == 3) ret.push_back(Pattern(option, vec, y, y, confidence));
+			ret.back().pattern_id = pattern_id++;
 			vec.clear();
 			continue;
 		}

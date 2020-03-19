@@ -152,7 +152,6 @@ private:
 
 	vector<Measure> measures_[3];
 
-	vector<pair<vector<int>, double>> load_frequent_set(const string& filename, const string &option);
 	vector<Sequence> LoadTestSequences(const string &file);
 
 };
