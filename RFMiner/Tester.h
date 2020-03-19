@@ -15,7 +15,7 @@ struct Measure {
 	double accuracy;
 	double precision;
 	double recall;
-	double ndcg;
+	double weighted_hit;
 	double r_precision;
 	double tf_idf;
 	double relevance_score;
@@ -23,11 +23,14 @@ struct Measure {
 	double predictions;
 	double valid_queries;
 	double correct_count;
+	double weightedF1;
 	int matched_queries;
 	char buffer[1000];
 
 	Measure()
-		:accuracy(0.0), precision(0.0), recall(0.0), ndcg(0.0), r_precision(0.0), tf_idf(0.0), relevance_score(0.0), valid_queries(0.0), matched_queries(0), predictions(0.0), correct_count(0.0){}
+		:accuracy(0.0), precision(0.0), recall(0.0), weighted_hit(0.0), r_precision(0.0), tf_idf(0.0), relevance_score(0.0), valid_queries(0.0), matched_queries(0), predictions(0.0), correct_count(0.0)
+	, weightedF1(0.0)
+	{}
 
 	void Calculate() {
 		double total = valid_queries;
@@ -41,15 +44,18 @@ struct Measure {
 		precision = 100.0*correct_count / predictions;
 		//printf("(%lf %lf) (%lf %lf)\n", correct_count, total, correct_count, predictions);
 		r_precision = 100.0*r_precision / total;
-		ndcg = 100.0*ndcg / total;
+		weighted_hit = 100.0*weighted_hit / total;
 		coverage = 100.0*match / total;
 		recall = 100.0*correct_count / valid_queries;
+		double weighted_precision = 100.0*weighted_hit / predictions;
+		double weighted_recall = 100.0*weighted_hit / valid_queries;
+		weightedF1 = 2.0*(weighted_precision*weighted_recall) / (weighted_precision + weighted_recall);
 		tf_idf = tf_idf / total;
 	}
 
 	void PrintStat() {
-		sprintf(buffer, "Accuracy: [%.2lf] Precision: [%.2lf], Rprecision: [%.2lf], NDCG: [%.2lf], Coverage: [%.1lf], Recall: [%.2lf], TFIDF: [%.6lf]\n", 
-			accuracy, precision, r_precision, ndcg, coverage, recall, tf_idf);
+		sprintf(buffer, "Accuracy: [%.2lf] Precision: [%.2lf], Rprecision: [%.2lf], WeightedF1: [%.2lf], Coverage: [%.1lf], Recall: [%.2lf], TFIDF: [%.6lf]\n", 
+			accuracy, precision, r_precision, weighted_hit, coverage, recall, tf_idf);
 		cout << buffer;
 	}
 };
@@ -122,7 +128,7 @@ public:
 
 	double Accuracy(const vector<int> &rec, const vector<int> &ans);
 	double Rprecision(const vector<int> &rec, const vector<int> &ans);
-	double NDCG(const int sequence_id, const vector<int> &rec, const vector<int> & ans);
+	double WeightedHit(const int sequence_id, const vector<int> &rec, const vector<int> & ans);
 	double Precision(const vector<int> &rec, const vector<int> &ans);
 	double Recall(const vector<int> &rec, const vector<int> &ans);
 	double TFIDF(const int sequence_id, const vector<int> &rec, const vector<int> &ans);

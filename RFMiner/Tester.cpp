@@ -361,7 +361,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 				transition_measure.precision += Precision(transition_retrieved, ground_truth_sequence);
 				transition_measure.recall += Recall(transition_retrieved, ground_truth_sequence);
 				transition_measure.r_precision += Rprecision(transition_retrieved, ground_truth_sequence);
-				transition_measure.ndcg += NDCG(sequence_id, transition_retrieved, ground_truth_sequence);
+				transition_measure.weighted_hit += WeightedHit(sequence_id, transition_retrieved, ground_truth_sequence);
 				transition_measure.tf_idf += TFIDF(sequence_id, transition_retrieved, ground_truth_sequence);
 				transition_measure.matched_queries++;
 				transition_measure.predictions += transition_retrieved.size();
@@ -371,7 +371,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 				ratio_measure.precision += Precision(ratio_retrieved, ground_truth_sequence);
 				ratio_measure.recall += Recall(ratio_retrieved, ground_truth_sequence);
 				ratio_measure.r_precision += Rprecision(ratio_retrieved, ground_truth_sequence);
-				ratio_measure.ndcg += NDCG(sequence_id, ratio_retrieved, ground_truth_sequence);
+				ratio_measure.weighted_hit += WeightedHit(sequence_id, ratio_retrieved, ground_truth_sequence);
 				ratio_measure.tf_idf += TFIDF(sequence_id, ratio_retrieved, ground_truth_sequence);
 				ratio_measure.matched_queries++;
 				ratio_measure.predictions += ratio_retrieved.size();
@@ -381,7 +381,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 				frequency_measure.precision += Precision(frequency_retrieved, ground_truth_sequence);
 				frequency_measure.recall += Recall(frequency_retrieved, ground_truth_sequence);
 				frequency_measure.r_precision += Rprecision(frequency_retrieved, ground_truth_sequence);
-				frequency_measure.ndcg += NDCG(sequence_id, frequency_retrieved, ground_truth_sequence);
+				frequency_measure.weighted_hit += WeightedHit(sequence_id, frequency_retrieved, ground_truth_sequence);
 				frequency_measure.tf_idf += TFIDF(sequence_id, frequency_retrieved, ground_truth_sequence);
 				frequency_measure.matched_queries++;
 				frequency_measure.predictions += frequency_retrieved.size();
@@ -451,27 +451,39 @@ double Tester::Rprecision(const vector<int> &rec, const vector<int> &ans) {
 	return (double)cnt / (double)ans.size();
 }
 
-double Tester::NDCG(const int sequence_id, const vector<int> &rec, const vector<int> & ans) {
-	unordered_map<int, int> mp;
-	for (const auto& e : ans) mp[e]++;
-
-	double dcg = 0.0;
-	vector<double> vec;
-	for (int i = 0; i < rec.size(); ++i) {
+double Tester::WeightedHit(const int sequence_id, const vector<int> &rec, const vector<int> & ans) {
+	unordered_set<int> st;
+	for (const auto& e : ans) st.insert(e);
+	for (int i = 0; i< rec.size(); ++i) {
 		const int &e = rec[i];
-		if (mp[e] > 0) {
-			mp[e]--;
-			dcg += static_cast<double>(database_.get_tfidf_score(e, sequence_id)) / log2(static_cast<double>(i) + 2.0);
-			vec.push_back(static_cast<double>(database_.get_tfidf_score(e, sequence_id)));
+		if (st.find(e) != st.end()) {
+			return (double)(ans.size() - i - 1) / (double)(ans.size());
 		}
 	}
-	sort(vec.begin(), vec.end());
-	reverse(vec.begin(), vec.end());
-	double idcg = 0.0;
-	for (int i = 0; i < vec.size(); ++i) idcg += vec[i] / log2(static_cast<double>(i) + 2.0);
-	if (idcg == 0.0) return 0.0;
-	return dcg / idcg;
+	return 0.0;
 }
+
+//double Tester::NDCG(const int sequence_id, const vector<int> &rec, const vector<int> & ans) {
+//	unordered_map<int, int> mp;
+//	for (const auto& e : ans) mp[e]++;
+//
+//	double dcg = 0.0;
+//	vector<double> vec;
+//	for (int i = 0; i < rec.size(); ++i) {
+//		const int &e = rec[i];
+//		if (mp[e] > 0) {
+//			mp[e]--;
+//			dcg += static_cast<double>(database_.get_tfidf_score(e, sequence_id)) / log2(static_cast<double>(i) + 2.0);
+//			vec.push_back(static_cast<double>(database_.get_tfidf_score(e, sequence_id)));
+//		}
+//	}
+//	sort(vec.begin(), vec.end());
+//	reverse(vec.begin(), vec.end());
+//	double idcg = 0.0;
+//	for (int i = 0; i < vec.size(); ++i) idcg += vec[i] / log2(static_cast<double>(i) + 2.0);
+//	if (idcg == 0.0) return 0.0;
+//	return dcg / idcg;
+//}
 
 double Tester::Precision(const vector<int> &rec, const vector<int> &ans) {
 	unordered_map<int, int> mp;
@@ -676,10 +688,10 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		}
 		outfile << "\n";
 
-		// NDCG
+		// weightedF1
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].ndcg;
+				outfile << measures_[j][k].weightedF1;
 				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}

@@ -42,8 +42,8 @@ vector<int> Predictor::ReturnRulePrediction(const int &top_k, const int &repeat)
 	int rsz = static_cast<int>(rule_list_.size());
 	for (int i = 0; i < rsz; ++i) {
 		for (const auto &item : rule_list_[i].consequent) {
-			if (repeat == 0 && vis.find(item) != vis.end()) continue;
-			if (repeat == 0) vis.insert(item);
+			if (/*repeat == 0 && */vis.find(item) != vis.end()) continue;
+			/*if (repeat == 0)*/ vis.insert(item);
 			ret.push_back(item);
 			if (static_cast<int>(ret.size()) == top_k) break;
 		}
