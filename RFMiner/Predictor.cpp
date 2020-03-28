@@ -22,6 +22,7 @@ void Predictor::SetTopPatternNumber(int pattern_num_lim) {
 	top_patterns_sz_ = sz;
 }
 
+
 void Predictor::GenerateRules(const vector<int> &query_sequence, int option, const int &repeat) {
 	for (int i = 0; i < top_patterns_sz_; ++i) {
 		Rule r = CreateRule(top_patterns_[i], query_sequence, option, repeat);

@@ -19,11 +19,12 @@ public:
 	vector<Pattern> GetSequentialPatterns();
 	void WritePatternFile(string filename);
 	void WriteQueryFile(string filename);
+	int GetNodeCnt();
 
-	int cnt;
 	void SetDebug();
 	int efficient_upperbound;
 private:
+	int node_cnt_;
 	double init_threshold_;;
 	double threshold_;
 	unordered_set<int> candidate_events_;

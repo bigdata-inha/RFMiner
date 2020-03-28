@@ -112,42 +112,6 @@ void Tester::fold_divider(int fold_size, double transition_ratio_init_threshold,
 	cout << buffer;
 }
 
-vector<Pattern> Tester::LoadFrequentPatterns(const string &filename, const int option) {
-	ifstream infile(filename);
-	vector<Pattern> ret;
-	int x;
-	double y;
-	double frequency;
-	int pattern_id = 0;
-	vector<int> vec;
-	while (infile >> x) {
-		if (x == -1) {
-			infile >> y;
-			if(option != 3) infile >> frequency;
-			vector<double> tmp_weights;
-			double weight;
-			if (option == 1) {
-				for (int i = 0; i < vec.size() - 1; ++i) {
-					infile >> weight;
-					tmp_weights.push_back(weight);
-				}
-			}
-			else if (option == 2) {
-				infile >> weight;
-				tmp_weights.push_back(weight);
-			}
-			if(option == 1)ret.push_back(Pattern(option, vec, y, frequency, tmp_weights));
-			else if (option == 2) ret.push_back(Pattern(option, vec, y, frequency, tmp_weights));
-			else if (option == 3) ret.push_back(Pattern(option, vec, y, frequency));
-			ret.back().pattern_id = pattern_id++;
-			vec.clear();
-			continue;
-		}
-		vec.push_back(x);
-	}
-	return ret;
-}
-
 
 vector<Pattern> Tester::LoadFrequentPatterns(const string &filename, const int option) {
 	ifstream infile(filename);
@@ -663,7 +627,8 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		// measures_ must be filled and foreach Measure struct, Calculate must be called.
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << pattern_numbers[k] << "\t";
+				outfile << pattern_numbers[k];
+				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
 		outfile << "\n";
@@ -671,7 +636,8 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		// Coverage
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].coverage << "\t";
+				outfile << measures_[j][k].coverage;
+				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
 		outfile << "\n";
@@ -679,7 +645,8 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		// Accuracy
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].accuracy << "\t";
+				outfile << measures_[j][k].accuracy;
+				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
 		outfile << "\n";
@@ -687,7 +654,8 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		// Precision
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].precision << "\t";
+				outfile << measures_[j][k].precision;
+				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
 		outfile << "\n";
@@ -695,7 +663,8 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		// Recall
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].recall << "\t";
+				outfile << measures_[j][k].recall;
+				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
 		outfile << "\n";
@@ -703,7 +672,8 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		// R-Precision
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].r_precision << "\t";
+				outfile << measures_[j][k].r_precision;
+				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
 		outfile << "\n";
@@ -711,7 +681,8 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		// NDCG
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].ndcg << "\t";
+				outfile << measures_[j][k].ndcg;
+				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
 		outfile << "\n";
@@ -719,7 +690,8 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		// TF-IDF
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].tf_idf << "\t";
+				outfile << measures_[j][k].tf_idf;
+				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
 		outfile << "\n";

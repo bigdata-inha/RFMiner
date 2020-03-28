@@ -57,9 +57,12 @@ public:
 
 	void WriteQueryFile(const string filename);
 	
-	int cnt;
+	int GetNodeCnt();
+
 	int naive;
 private:
+	int node_cnt;
+
 	// Frequency version
 	double frequency_minsup_;
 

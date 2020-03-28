@@ -1,11 +1,15 @@
 #include "PatternMiner.h"
 
 PatternMiner::PatternMiner() {
-	cnt = 0;
 	efficient_upperbound = 1;
+	node_cnt_ = 0ULL;
 }
 
 PatternMiner::~PatternMiner() {}
+
+int PatternMiner::GetNodeCnt() {
+	return node_cnt_;
+}
 
 void PatternMiner::ClearPatterns() {
 	sequential_patterns_.clear();
@@ -27,6 +31,7 @@ void PatternMiner::Run(double init_threshold, double threshold, int option) {
 	init_threshold_ = init_threshold;
 	threshold_ = threshold;
 	option_ = option;
+	node_cnt_++;
 
 	unordered_map<int, unordered_set<int>> inverted_list;
 	unordered_map<int, vector<PatternInstance>> item2pattern_instances;
@@ -177,7 +182,7 @@ void PatternMiner::WriteQueryFile(string filename) {
 
 
 void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set, double pre_interesting) {
-	cnt++;
+	node_cnt_++;
 
 	const int pattern_length = static_cast<int>(pattern.size());
 	const int plus_pattern_len = pattern_length + 1;
