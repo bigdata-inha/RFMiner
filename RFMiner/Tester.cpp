@@ -294,6 +294,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 			ratio_retrieved.clear();
 			frequency_retrieved.clear();
 
+			// split query sequence by split_ratio
 			int sz = (int)((double)tmp.size()*(1.0 - truth_split));
 			vector<int> tmp_seqeuence;
 
@@ -324,6 +325,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 			auto query_time_frequency_tmp = query_time_transition_tmp;
 
 			auto start1 = std::chrono::high_resolution_clock::now();
+			//generate rule, return prediction
 			transition_predictor.GenerateRules(query_sequence, 1, repeated_events);
 			transition_retrieved = transition_predictor.ReturnRulePrediction(top_k, repeated_events);
 			auto stop1 = std::chrono::high_resolution_clock::now();
@@ -359,7 +361,8 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 			query_time_frequency += query_time_frequency_tmp;
 			avg_query_length += static_cast<double>(query_sequence.size());
 			success += 1.0;
-		
+			
+			// compare with ground truth
 			if (transition_retrieved.size() >= top_k) {
 				transition_measure.accuracy += Accuracy(transition_retrieved, ground_truth_sequence);
 				transition_measure.precision += Precision(transition_retrieved, ground_truth_sequence);
@@ -768,6 +771,7 @@ vector<double> Tester::KthThreshold(int fold_size, string path, int top_patterns
 	// parameter, string = dataset, K = 1000 := number of patterns.
 	
 	vector<double> k_th_threshold(3);
+	for (int i = 0; i < 3; ++i) k_th_threshold[i] = 1.0;
 
 	// fold 1 ~5, Kth threshold for each measure
 	for (int i = 0; i < fold_size; ++i) {
@@ -789,12 +793,12 @@ vector<double> Tester::KthThreshold(int fold_size, string path, int top_patterns
 			FM.set_pattern_num_lim(top_patterns);
 		}
 
-		k_th_threshold[0] += TM.GetLastThreshold();
-		k_th_threshold[1] += RM.GetLastThreshold();
-		k_th_threshold[2] += FM.GetLastThreshold();
+		k_th_threshold[0] = std::min(k_th_threshold[0], TM.GetLastThreshold());
+		k_th_threshold[1] = std::min(k_th_threshold[1], RM.GetLastThreshold());
+		k_th_threshold[2] = std::min(k_th_threshold[2], FM.GetLastThreshold());
 	}
 
-	for (int i = 0; i < 3; ++i) k_th_threshold[i] /= static_cast<double>(fold_size);
+	//for (int i = 0; i < 3; ++i) k_th_threshold[i] /= static_cast<double>(fold_size);
 	return k_th_threshold;
 }
 
@@ -835,9 +839,13 @@ vector<double> Tester::KthRunTime(string path, int top_patterns, vector<double> 
 
 	vector<double> mining_time(3);
 
-	mining_time[0] = static_cast<double>(mining_time_rec.count());
+	/*mining_time[0] = static_cast<double>(mining_time_rec.count());
 	mining_time[1] = static_cast<double>(mining_time_comp.count());
-	mining_time[2] = static_cast<double>(mining_time_pre.count());
+	mining_time[2] = static_cast<double>(mining_time_pre.count());*/
+	// change to node_cnt
+	mining_time[0] = recency_miner.GetNodeCnt();
+	mining_time[1] = compactness_miner.GetNodeCnt();
+	mining_time[2] = presence_miner.GetNodeCnt();
 
 	return mining_time;
 }

@@ -82,7 +82,7 @@ struct PatternSetAnalysis {
 		else pattern_num_lim = a_pattern_num_lim;
 		int sz = std::min(static_cast<int>(patterns.size()), pattern_num_lim);
 		vector<Pattern> vec;
-		for (int i = 0; i < sz; ++i) {
+;		for (int i = 0; i < sz; ++i) {
 			vec.push_back(patterns[i]);
 		}
 		active_patterns = vec;
