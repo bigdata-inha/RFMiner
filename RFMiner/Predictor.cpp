@@ -101,6 +101,12 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 	for (const auto &pi : final_pi_set) {
 		const int &last_matched_pattern_offset = pattern_sz - 2;
 
+	/*	for (int i = 0; i < query_sequence.size(); ++i) printf("%d ", query_sequence[i]);
+		printf("\n");
+		for (int i = 0; i < pattern_sequence.size(); ++i) printf("%d ", pattern_sequence[i]);
+		printf("\n");
+		getchar();*/
+
 		// P = <a, b, c, d>
 		// Q = <a, x, x, b, c, x, x>
 
