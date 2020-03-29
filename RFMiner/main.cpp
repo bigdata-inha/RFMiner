@@ -74,13 +74,13 @@ void BMSView1Test() {
 	//T.WriteTopPatternInfo(fold_size, path, top_pattern_numbers);
 
 	vector<int> exe_top_pattern_numbers = { 1000, 2000, 3000, 4000, 5000 };
-	T.ExecutionTimeTest(fold_size, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", exe_top_pattern_numbers);
+	//T.ExecutionTimeTest(fold_size, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", exe_top_pattern_numbers);
 
 	vector<int> naive_pattern_numbers = { 1000, 2000, 3000, 4000, 5000 };
 	//T.ExperimentTimeNaive(fold_size, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", naive_pattern_numbers);
 	
 	vector<double> split_ratio_vec = { 0.1, 0.3, 0.5, 0.7, 0.9 };
-	//T.ExperimentTopK(fold_size, path, topk, database.get_rep(), top_pattern_numbers, split_ratio_vec);
+	T.ExperimentTopK(fold_size, path, topk, database.get_rep(), top_pattern_numbers, split_ratio_vec);
 }
 
 void BMSView2Test() {
@@ -254,7 +254,7 @@ void ExampleTest() {
 int main() {
 	//BibleTest();
 	//KosarakTest();
-	BMSView2Test();
+	//BMSView2Test();
 	BMSView1Test();
 	//MSNBCTest();
 	//FIFATest();
