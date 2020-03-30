@@ -120,7 +120,7 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 		
 			if(debug_) printf("unique\n");
 
-			int pre = query_sz;
+			/*int pre = query_sz;
 			int cur = last_matched_pattern_offset;
 			for (int i = query_sz - 1; i >= 0 && cur >= 0; --i) {
 				if (query_sequence[i] == pattern_sequence[cur]) {
@@ -129,7 +129,18 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 					--cur;
 				}
 			}
-			std::reverse(gaps.begin(), gaps.end());
+			std::reverse(gaps.begin(), gaps.end());*/
+			int j = 0;
+			int pre = 0;
+			for (int i = pi.l; i <= pi.r; ++i) {
+				if (query_sequence[i] == pattern_sequence[j]) {
+					if(j != 0) gaps.push_back(static_cast<double>(i - pre));
+					pre = i;
+					++j;
+				}
+			}
+			assert(j == pattern_sz - 1);
+			gaps.push_back(query_sz - j);
 
 			vector<double> gap_matches;
 			int gaps_sz = static_cast<int>(gaps.size());
