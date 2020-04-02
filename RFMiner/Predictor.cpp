@@ -130,17 +130,17 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 				}
 			}
 			std::reverse(gaps.begin(), gaps.end());*/
-			int j = 0;
-			int pre = 0;
-			for (int i = pi.l; i <= pi.r; ++i) {
+			int j = pattern_sz - 2;
+			int pre = query_sz;
+			for (int i = pi.r; i >= pi.l; --i) {
 				if (query_sequence[i] == pattern_sequence[j]) {
-					if(j != 0) gaps.push_back(static_cast<double>(i - pre));
+					gaps.push_back(static_cast<double>(pre - i));
 					pre = i;
-					++j;
+					--j;
 				}
 			}
-			assert(j == pattern_sz - 1);
-			gaps.push_back(query_sz - j);
+			assert(j == -1);
+			std::reverse(gaps.begin(), gaps.end());
 
 			vector<double> gap_matches;
 			int gaps_sz = static_cast<int>(gaps.size());

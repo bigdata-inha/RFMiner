@@ -255,7 +255,7 @@ int main() {
 	//BibleTest();
 	//KosarakTest();
 	BMSView2Test();
-	//BMSView1Test();
+	BMSView1Test();
 	//MSNBCTest();
 	FIFATest();
 	//FifaDataProcess("Data/FIFA/FIFA20450.txt");
