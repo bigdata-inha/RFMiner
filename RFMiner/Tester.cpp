@@ -809,8 +809,8 @@ vector<double> Tester::KthRunTime(string path, int top_patterns, vector<double> 
 	PrefixSpan presence_miner;
 
 	// upperbound set to frequency support
-	recency_miner.efficient_upperbound = 1;
-	compactness_miner.efficient_upperbound = 1;
+	recency_miner.efficient_upperbound = 0;
+	compactness_miner.efficient_upperbound = 0;
 
 	auto start = std::chrono::high_resolution_clock::now();
 	auto stop = std::chrono::high_resolution_clock::now();

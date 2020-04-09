@@ -42,7 +42,7 @@ private:
 	int debug_;
 
 	void RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set, double pre_interesting);
-	unordered_map<int, vector<PatternInstance>> GrowNew(vector<PatternInstance> pi_set, int last_event, unordered_map<int, unordered_map<int, int>> &max_length_map, unordered_map<int, double> &min_instance, unordered_map<int, unordered_set<int>> &inverted_list);
+	unordered_map<int, vector<PatternInstance>> GrowNew(vector<int> pattern, vector<PatternInstance> pi_set, int last_event, unordered_map<int, unordered_map<int, int>> &max_length_map, unordered_map<int, double> &min_instance, unordered_map<int, unordered_set<int>> &inverted_list);
 	double UpperBound(double plus_pattern_len, unordered_map<int, int > max_length_map, double min_instance);
 
 };

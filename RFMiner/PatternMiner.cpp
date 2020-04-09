@@ -201,7 +201,7 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set,
 	unordered_map<int, double> min_instance;
 	unordered_map<int, unordered_set<int>> inverted_list;
 
-	unordered_map<int, vector<PatternInstance>> item2pattern_instances = GrowNew(pi_set, pattern.back(), max_length_map, min_instance, inverted_list);
+	unordered_map<int, vector<PatternInstance>> item2pattern_instances = GrowNew(pattern, pi_set, pattern.back(), max_length_map, min_instance, inverted_list);
 
 	for (const auto &entry : item2pattern_instances) {
 		const int e = entry.first;
@@ -299,7 +299,7 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set,
 	}
 }
 
-unordered_map<int, vector<PatternInstance>> PatternMiner::GrowNew(vector<PatternInstance> pi_set, int last_event, unordered_map<int, unordered_map<int, int >> &max_length_map, unordered_map<int, double> &min_instance, unordered_map<int, unordered_set<int>> &inverted_list) {
+unordered_map<int, vector<PatternInstance>> PatternMiner::GrowNew(vector<int> pattern, vector<PatternInstance> pi_set, int last_event, unordered_map<int, unordered_map<int, int >> &max_length_map, unordered_map<int, double> &min_instance, unordered_map<int, unordered_set<int>> &inverted_list) {
 	unordered_map<int, vector<PatternInstance>> ret;
 
 	int pi_set_sz = static_cast<int>(pi_set.size());
@@ -325,30 +325,29 @@ unordered_map<int, vector<PatternInstance>> PatternMiner::GrowNew(vector<Pattern
 
 			// if not candidate events, then discard
 			if (candidate_events_.find(e) == candidate_events_.end()) continue;
-			
-			// if last event, then adjust  landmark
-			if (e == last_event) {
-				if (!first) {
-					first = true;
-				}
-				else {
-					landmark.pop_back();
-					landmark.push_back(j);
-				}
-			}
 
 			// leftmost visited?
 			if (leftmost_vis.find(e) == leftmost_vis.end()) {
 				leftmost_vis.insert(e);
 				int ext_len = static_cast<int>(S.size()) - j;
+				vector<int> landmark;
 				landmark.push_back(j);
+				int pos = pattern.size() - 1;
+				for (int k = j - 1; k > pi.l; --k) {
+					if (pos == 0) break;
+					if (S[k] == pattern[pos]) {
+						--pos;
+						landmark.push_back(k);
+					}
+				}
+				landmark.push_back(pi.l);
+				std::reverse(landmark.begin(), landmark.end());
 				ret[e].push_back(PatternInstance(option_, id, pi.l, j, ext_len, landmark));
 				if(ext_len != 0) max_length_map[e][id] = std::max(max_length_map[e][id], ext_len);
 				if (min_instance.find(e) == min_instance.end()) {
 					min_instance[e] = 100000000.0;
 				}
 				min_instance[e] = std::min(min_instance[e], ret[e].back().denom);
-				landmark.pop_back();
 			}
 		}
 	}

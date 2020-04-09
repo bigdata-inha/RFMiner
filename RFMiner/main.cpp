@@ -54,10 +54,10 @@ void BMSView1Test() {
 	T.LoadDatabase(database);
 
 	int fold_size = 5;
-	double transition_ratio_init_threshold = 0.0004;
-	double transition_threshold = 0.0004;
-	double ratio_threshold = 0.0004;
-	double frequency_threshold = 0.0005;
+	double transition_ratio_init_threshold = 0.00039;
+	double transition_threshold = 0.00039;
+	double ratio_threshold = 0.00039;
+	double frequency_threshold = 0.0006;
 	int pattern_num_lim = 200;
 	double split_ratio = 0.5;
 	int topk = 1;
@@ -74,13 +74,12 @@ void BMSView1Test() {
 	//T.WriteTopPatternInfo(fold_size, path, top_pattern_numbers);
 
 	vector<int> exe_top_pattern_numbers = { 1000, 2000, 3000, 4000, 5000 };
-	//T.ExecutionTimeTest(fold_size, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", exe_top_pattern_numbers);
+	T.ExecutionTimeTest(fold_size, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", exe_top_pattern_numbers);
 
 	vector<int> naive_pattern_numbers = { 1000, 2000, 3000, 4000, 5000 };
 	//T.ExperimentTimeNaive(fold_size, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", naive_pattern_numbers);
-	
 	vector<double> split_ratio_vec = { 0.1, 0.3, 0.5, 0.7, 0.9 };
-	T.ExperimentTopK(fold_size, path, topk, database.get_rep(), top_pattern_numbers, split_ratio_vec);
+	//T.ExperimentTopK(fold_size, path, topk, database.get_rep(), top_pattern_numbers, split_ratio_vec);
 }
 
 void BMSView2Test() {
@@ -93,10 +92,10 @@ void BMSView2Test() {
 	T.LoadDatabase(database);
 
 	int fold_size = 5;
-	double transition_ratio_init_threshold = 0.0005;
-	double transition_threshold = 0.0005;
-	double ratio_threshold = 0.0005;
-	double frequency_threshold = 0.0005;
+	double transition_ratio_init_threshold = 0.001;
+	double transition_threshold = 0.001;
+	double ratio_threshold = 0.001;
+	double frequency_threshold = 0.001;
 	int pattern_num_lim = 2000;
 	double split_ratio = 0.1;
 	int topk = 1;
@@ -107,7 +106,7 @@ void BMSView2Test() {
 
 	T.set_result_filename(result_filename);
 
-	//T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
+	T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
 	
 	vector<int> top_pattern_numbers = { 1000, 1500, 2000, 2500, 3000 };
 	//T.WriteTopPatternInfo(fold_size, path, top_pattern_numbers);
@@ -118,7 +117,7 @@ void BMSView2Test() {
 
 	vector<int> naive_pattern_numbers = { 1000, 2000, 3000, 4000, 5000 };
 	//T.ExperimentTimeNaive(fold_size, path, "Data/BMS2/BMSWebView2(KDDCUP)77512.txt", naive_pattern_numbers);
-	
+
 	vector<double> split_ratio_vec = { 0.1, 0.3, 0.5, 0.7, 0.9 };
 	T.ExperimentTopK(fold_size, path, topk, database.get_rep(), top_pattern_numbers, split_ratio_vec);
 }
@@ -198,10 +197,10 @@ void FIFATest() {
 	T.LoadDatabase(database);
 
 	int fold_size = 5;
-	double transition_ratio_init_threshold = 0.005;
-	double transition_threshold = 0.005;
-	double ratio_threshold = 0.005;
-	double frequency_threshold = 0.005;
+	double transition_ratio_init_threshold = 0.008;
+	double transition_threshold = 0.008;
+	double ratio_threshold = 0.008;
+	double frequency_threshold = 0.008;
 	int pattern_num_lim = 20;
 	double split_ratio = 0.1;
 	int topk = 1;
@@ -212,7 +211,7 @@ void FIFATest() {
 
 	T.set_result_filename(result_filename);
 
-	//T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
+	T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
 	vector<int> top_pattern_numbers = { 1000, 1500, 2000, 2500, 3000 };
 	//T.WriteTopPatternInfo(fold_size, path, top_pattern_numbers);
 	
@@ -254,10 +253,10 @@ void ExampleTest() {
 int main() {
 	//BibleTest();
 	//KosarakTest();
-	BMSView2Test();
+	//BMSView2Test();
 	BMSView1Test();
 	//MSNBCTest();
-	FIFATest();
+	//FIFATest();
 	//FifaDataProcess("Data/FIFA/FIFA20450.txt");
 	//DataGenerate();
 
