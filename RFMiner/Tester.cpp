@@ -221,9 +221,9 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 
 		auto query_database = LoadTestSequences(testfile);
 
-		PatternSetAnalysis TM(transition_pattern_set);
-		PatternSetAnalysis RM(ratio_pattern_set);
-		PatternSetAnalysis FM(frequency_pattern_set);
+		PatternSetAnalysis TM(transition_pattern_set, RECENCY);
+		PatternSetAnalysis RM(ratio_pattern_set, COMPACTNESS);
+		PatternSetAnalysis FM(frequency_pattern_set, PRESENCE);
 		if (pattern_num_lim != -1) {
 			TM.set_pattern_num_lim(pattern_num_lim);
 			RM.set_pattern_num_lim(pattern_num_lim);
@@ -548,9 +548,9 @@ void Tester::WriteTopPatternInfo(int fold_size, string path, vector<int> pattern
 		auto frequency_pattern_set = LoadFrequentPatterns(fileC, 3);
 
 
-		PatternSetAnalysis TM(transition_pattern_set);
-		PatternSetAnalysis RM(ratio_pattern_set);
-		PatternSetAnalysis FM(frequency_pattern_set);
+		PatternSetAnalysis TM(transition_pattern_set, RECENCY);
+		PatternSetAnalysis RM(ratio_pattern_set, COMPACTNESS);
+		PatternSetAnalysis FM(frequency_pattern_set, PRESENCE);
 
 		total_pattern_num[0] += static_cast<int>(transition_pattern_set.size());
 		total_pattern_num[1] += static_cast<int>(ratio_pattern_set.size());
@@ -707,10 +707,10 @@ void Tester::ExecutionTimeTest(int fold_size, string path, string dataset_path, 
 	const int pn_sz = static_cast<int>(pattern_numbers.size());
 	vector<vector<double>> threshold_matrix(3);
 	for (int i = 0; i < 3; ++i) threshold_matrix[i].resize(pn_sz);
-
+	int first_set = 1;
 	cout << "Number of K : " << pn_sz << "\n";
 	for (int i = 0; i < pn_sz; ++i) {
-		vector<double> ret = KthThreshold(fold_size, path, pattern_numbers[i]);
+		vector<double> ret = KthThreshold(first_set, path, pattern_numbers[i]);
 		for (int j = 0; j < 3; ++j) {
 			threshold_matrix[j][i] = ret[j];
 		}
@@ -766,11 +766,13 @@ void Tester::ExecutionTimeTest(int fold_size, string path, string dataset_path, 
 	cout << "finished.\n";
 }
 
+// This function return the minimum threshold number for each pattern type.
 vector<double> Tester::KthThreshold(int fold_size, string path, int top_patterns) {
 
 	// parameter, string = dataset, K = 1000 := number of patterns.
 	
 	vector<double> k_th_threshold(3);
+	// Initialzie to maximum threshold
 	for (int i = 0; i < 3; ++i) k_th_threshold[i] = 1.0;
 
 	// fold 1 ~5, Kth threshold for each measure
@@ -780,22 +782,22 @@ vector<double> Tester::KthThreshold(int fold_size, string path, int top_patterns
 		string fileB = path + "foldB" + to_string(i + 1);
 		string fileC = path + "foldC" + to_string(i + 1);
 
-		auto transition_pattern_set = LoadFrequentPatterns(fileA, 1);
-		auto ratio_pattern_set = LoadFrequentPatterns(fileB, 2);
-		auto frequency_pattern_set = LoadFrequentPatterns(fileC, 3);
+		auto recency_pattern_set = LoadFrequentPatterns(fileA, 1);
+		auto compactness_pattern_set = LoadFrequentPatterns(fileB, 2);
+		auto presence_pattern_set = LoadFrequentPatterns(fileC, 3);
 
-		PatternSetAnalysis TM(transition_pattern_set);
-		PatternSetAnalysis RM(ratio_pattern_set);
-		PatternSetAnalysis FM(frequency_pattern_set);
-		if (top_patterns != -1) {
-			TM.set_pattern_num_lim(top_patterns);
-			RM.set_pattern_num_lim(top_patterns);
-			FM.set_pattern_num_lim(top_patterns);
-		}
+		PatternSetAnalysis RM(recency_pattern_set, RECENCY);
+		PatternSetAnalysis CM(compactness_pattern_set, COMPACTNESS);
+		PatternSetAnalysis PM(presence_pattern_set, PRESENCE);
 
-		k_th_threshold[0] = std::min(k_th_threshold[0], TM.GetLastThreshold());
-		k_th_threshold[1] = std::min(k_th_threshold[1], RM.GetLastThreshold());
-		k_th_threshold[2] = std::min(k_th_threshold[2], FM.GetLastThreshold());
+		RM.set_pattern_num_lim(top_patterns);
+		CM.set_pattern_num_lim(top_patterns);
+		PM.set_pattern_num_lim(top_patterns);
+		
+
+		k_th_threshold[0] = std::min(k_th_threshold[0], RM.GetLastThreshold());
+		k_th_threshold[1] = std::min(k_th_threshold[1], CM.GetLastThreshold());
+		k_th_threshold[2] = std::min(k_th_threshold[2], PM.GetLastThreshold());
 	}
 
 	//for (int i = 0; i < 3; ++i) k_th_threshold[i] /= static_cast<double>(fold_size);
@@ -818,9 +820,9 @@ vector<double> Tester::KthRunTime(string path, int top_patterns, vector<double> 
 	auto mining_time_comp = mining_time_rec;
 	auto mining_time_pre = mining_time_rec;
 
-	recency_miner.LoadTrainingDatabase(database.get_full_db());
-	compactness_miner.LoadTrainingDatabase(database.get_full_db());
-	presence_miner.LoadTrainDatabase(database.get_full_db());
+	recency_miner.LoadTrainingDatabase(database.get_train_db(0));
+	compactness_miner.LoadTrainingDatabase(database.get_train_db(0));
+	presence_miner.LoadTrainDatabase(database.get_train_db(0));
 
 	start = std::chrono::high_resolution_clock::now();
 	recency_miner.Run(thresholds[0], thresholds[0], 1);

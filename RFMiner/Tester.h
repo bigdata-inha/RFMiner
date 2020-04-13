@@ -53,11 +53,15 @@ struct PatternSetAnalysis {
 	double avg_pattern_length;
 	int number_unique_items;
 	int pattern_num_lim;
+	int type;
 
-	PatternSetAnalysis(vector<Pattern> a_patterns)
-		:patterns(a_patterns), pattern_num_lim(1000000) {
+	PatternSetAnalysis(vector<Pattern> a_patterns, int a_type)
+		:patterns(a_patterns), type(a_type), pattern_num_lim(1000000) {
 		// patterns are sorted in descending order according to their score
 		sort(patterns.begin(), patterns.end());
+		if (patterns.size() > 2) {
+			assert(patterns[0].interestingness > patterns[1].interestingness);
+		}
 		avg_pattern_length = 0.0;
 		number_unique_items = 0;
 		active_patterns = patterns;
@@ -82,12 +86,19 @@ struct PatternSetAnalysis {
 		if (a_pattern_num_lim == -1) pattern_num_lim = static_cast<int>(patterns.size());
 		else {
 			pattern_num_lim = a_pattern_num_lim;
+			pattern_num_lim += 100;
 			sz = std::min(static_cast<int>(patterns.size()), pattern_num_lim);
+			string type_string;
+			if (type == RECENCY) type_string = "RECENCY";
+			else if (type == COMPACTNESS) type_string = "COMPACTNESS";
+			else if (type == PRESENCE) type_string = "PRESENCE";
+			cout << "Setting pattern type:" << type_string << " (sz, pattern_num_lim, patterns.size())" << "(" << sz << ", "<< a_pattern_num_lim <<","<< patterns.size() << " ";
 		}
 		vector<Pattern> vec;
 ;		for (int i = 0; i < sz; ++i) {
 			vec.push_back(patterns[i]);
 		}
+cout << "last interesting value: " << vec.back().interestingness << "\n";
 		active_patterns = vec;
 	}
 
