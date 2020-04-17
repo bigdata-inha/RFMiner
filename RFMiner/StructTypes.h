@@ -14,6 +14,8 @@
 #include <map>
 #include <algorithm>
 #include <assert.h>
+#include <sstream>
+#include <iomanip>
 
 using std::vector;
 using std::pair;

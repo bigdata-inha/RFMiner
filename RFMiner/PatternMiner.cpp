@@ -30,6 +30,7 @@ void PatternMiner::LoadTestDatabase(vector<Sequence> database) {
 void PatternMiner::Run(double init_threshold, double threshold, int option) {
 	init_threshold_ = init_threshold;
 	threshold_ = threshold;
+	printf("threshold: %lf\n", threshold_);
 	option_ = option;
 	node_cnt_++;
 
@@ -129,6 +130,7 @@ vector<Pattern> PatternMiner::GetSequentialPatterns() {
 
 void PatternMiner::WritePatternFile(string filename) {
 	ofstream outfile(filename);
+	outfile.precision(20);
 	if (sequential_patterns_.empty()) return;
 	sort(sequential_patterns_.begin(), sequential_patterns_.end());
 	if (sequential_patterns_[0].type == 1) {
@@ -138,15 +140,24 @@ void PatternMiner::WritePatternFile(string filename) {
 			int pattern_length = static_cast<int>(entry.pattern.size());
 			string line;
 			for (int j = 0; j < pattern_length; ++j) {
-				line += std::to_string(entry.pattern[j]) + " ";
+				outfile << entry.pattern[j] << " ";
+				//line += std::to_string(entry.pattern[j]) + " ";
 			}
-			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence) + "\n";
+			outfile << "-1 " << std::setprecision(20) << entry.interestingness << " " << std::setprecision(20) << entry.frequency << " " << std::setprecision(20)<<entry.confidence << "\n";
+			//line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence) + "\n";
 			for (int j = 0; j < pattern_length - 1; ++j) {
-				line += std::to_string(entry.gap_sequence[j]);
-				if (j + 1 != pattern_length - 1) line += " ";
+				outfile << entry.gap_sequence[j];
+				//line += std::to_string(entry.gap_sequence[j]);
+				if (j + 1 != pattern_length - 1) {
+					//line += " ";
+					outfile << " ";
+				}
 			}
-			if (i + 1 != sz) line += "\n";
-			outfile << line;
+			if (i + 1 != sz) {
+				outfile << "\n";
+				//line += "\n";
+			}
+			//outfile << line;
 		}
 	}
 	else if (sequential_patterns_[0].type == 2) {
@@ -154,13 +165,11 @@ void PatternMiner::WritePatternFile(string filename) {
 		for (int i = 0; i < sz; ++i) {
 			const auto &entry = sequential_patterns_[i];
 			int pattern_length = static_cast<int>(entry.pattern.size());
-			string line;
 			for (int j = 0; j < pattern_length; ++j) {
-				line += std::to_string(entry.pattern[j]) + " ";
+				outfile << entry.pattern[j] << " ";
 			}
-			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence) + "\n";
-			line += std::to_string(entry.gap_sequence.front()) + "\n";
-			outfile << line;
+			outfile << "-1 " << std::setprecision(20) << entry.interestingness << " " << std::setprecision(20) << entry.frequency << " " << std::setprecision(20) << entry.confidence << "\n";
+			outfile << entry.gap_sequence.front() << "\n";
 		}
 	}
 }
@@ -326,7 +335,7 @@ unordered_map<int, vector<PatternInstance>> PatternMiner::GrowNew(vector<int> pa
 			// if not candidate events, then discard
 			if (candidate_events_.find(e) == candidate_events_.end()) continue;
 
-			// leftmost visited?
+			// [a x x x b x x c x x c]
 			if (leftmost_vis.find(e) == leftmost_vis.end()) {
 				leftmost_vis.insert(e);
 				int ext_len = static_cast<int>(S.size()) - j;
@@ -371,8 +380,14 @@ double PatternMiner::UpperBound(double plus_pattern_len, unordered_map<int, int 
 		it->second += cnt;
 		--it;
 	}
+	for (auto it = upper_bound_map.begin(); it != upper_bound_map.end(); ++it) {
+		auto it2 = it;
+		it++;
+		if (it == upper_bound_map.end()) break;
+		assert(it->second >= it2->second);
+	}
 
-	if (option_ == 1) {
+	if (option_ == RECENCY) {
 		double P = (double)(plus_pattern_len);
 		for (const auto &entry : upper_bound_map) {
 			double K = (double)(-entry.first);
@@ -386,7 +401,7 @@ double PatternMiner::UpperBound(double plus_pattern_len, unordered_map<int, int 
 		}
 		max_upper /= static_cast<double>(training_sequencde_database_sz_);
 	}
-	else if (option_ == 2) {
+	else if (option_ == COMPACTNESS) {
 		double P = (double)(plus_pattern_len);
 		for (const auto &entry : upper_bound_map) {
 			double K = (double)(-entry.first);

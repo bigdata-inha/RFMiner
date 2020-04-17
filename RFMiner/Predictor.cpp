@@ -161,7 +161,7 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 			}
 		}
 		else if (option == COMPACTNESS) {
-			double ratio_difference = abs(pattern.gap_sequence.front() - static_cast<double>((query_sz - pi.l)));
+			double ratio_difference = abs(pattern.gap_sequence.front() - static_cast<double>((query_sz - pi.l + 1)));
 			double ratio_score = 1.0 / (ratio_difference + 1.0) * pattern.confidence;
 			if (max_ratio_score < ratio_score) {
 				max_ratio_score = ratio_score;

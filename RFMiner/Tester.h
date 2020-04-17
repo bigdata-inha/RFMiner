@@ -86,7 +86,6 @@ struct PatternSetAnalysis {
 		if (a_pattern_num_lim == -1) pattern_num_lim = static_cast<int>(patterns.size());
 		else {
 			pattern_num_lim = a_pattern_num_lim;
-			pattern_num_lim += 100;
 			sz = std::min(static_cast<int>(patterns.size()), pattern_num_lim);
 			string type_string;
 			if (type == RECENCY) type_string = "RECENCY";
@@ -94,11 +93,12 @@ struct PatternSetAnalysis {
 			else if (type == PRESENCE) type_string = "PRESENCE";
 			cout << "Setting pattern type:" << type_string << " (sz, pattern_num_lim, patterns.size())" << "(" << sz << ", "<< a_pattern_num_lim <<","<< patterns.size() << " ";
 		}
-		vector<Pattern> vec;
-;		for (int i = 0; i < sz; ++i) {
+		vector<Pattern> vec;		
+		for (int i = 0; i < sz; ++i) {
+			assert(patterns[i].interestingness >= patterns[i + 1].interestingness);
 			vec.push_back(patterns[i]);
 		}
-cout << "last interesting value: " << vec.back().interestingness << "\n";
+		printf("last interesting value: %lf, size of active patterns: %d\n", vec.back().interestingness, vec.size());
 		active_patterns = vec;
 	}
 
@@ -110,6 +110,10 @@ cout << "last interesting value: " << vec.back().interestingness << "\n";
 
 	double GetLastThreshold() {
 		return active_patterns.back().interestingness;
+	}
+
+	double GetLastFrequency() {
+		return active_patterns.back().frequency;
 	}
 
 	double get_avg_pattern_len() { return avg_pattern_length; }
@@ -155,6 +159,10 @@ public:
 
 	void CaseStudy(string path);
 
+	void MineDatabase(int type, double threshold, const string& path, Database &database);
+	void CandidateGenTest(int efficient, string path, string dataset_path, vector<int> pattern_numbers);
+	vector<double> CandidateKthThreshold(string path, int top_patterns);
+	vector<double> CandidateKthRunTime(int efficient, string path, int top_patterns, vector<double> thresholds, Database &database);
 
 private:
 	vector<int> Q, S;

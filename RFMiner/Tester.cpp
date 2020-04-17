@@ -15,6 +15,142 @@ ostream& operator<<(ostream& os, const vector<T>& v)
 	return os;
 }
 
+void Tester::MineDatabase(int type, double threshold, const string& path, Database &database) {
+	string filename = path + "fold_";
+	if (type == RECENCY) {
+		printf("Mining RECENCY patterns\n");
+		filename += "RECENCY";
+	}
+	else if (type == COMPACTNESS) {
+		printf("Mining COMPACTNESS patterns\n");
+		filename += "COMPACTNESS";
+	}
+	else printf("ERROR in mining type\n");
+	if (type == RECENCY || type == COMPACTNESS) {
+		PatternMiner miner;
+		miner.LoadTrainingDatabase(database.get_full_db());
+		miner.Run(threshold, threshold, type);
+		miner.WritePatternFile(filename);
+	}
+}
+
+void Tester::CandidateGenTest(int efficient, string path, string dataset_path, vector<int> pattern_numbers) {
+
+	const int pn_sz = static_cast<int>(pattern_numbers.size());
+	vector<vector<double>> threshold_matrix(2);
+	for (int i = 0; i < 2; ++i) threshold_matrix[i].resize(pn_sz);
+	cout << "Number of K : " << pn_sz << "\n";
+	for (int i = 0; i < pn_sz; ++i) {
+		vector<double> ret = CandidateKthThreshold(path, pattern_numbers[i]);
+		for (int j = 0; j < 2; ++j) {
+			threshold_matrix[j][i] = ret[j];
+		}
+		cout << i + 1 << "/" << pn_sz << " finished.\n";
+	}
+
+	// Save Threshold Matrix
+	ofstream outfile1(path + "/Experiment/ThresholdMatrix.txt");
+	for (int i = 0; i < pn_sz; ++i) {
+		outfile1 << pattern_numbers[i];
+		if (i + 1 < pn_sz) outfile1 << "\t";
+		else outfile1 << "\n";
+	}
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < pn_sz; ++j) {
+			outfile1 << threshold_matrix[i][j];
+			if (j + 1 < pn_sz) outfile1 << "\t";
+		}
+		if (i + 1 < 2) outfile1 << "\n";
+	}
+
+	Database database;
+	database.ReadDataSpmfFormat(dataset_path);
+	vector<vector<double>> execution_time_matrix(2);
+	for (int i = 0; i < 2; ++i) execution_time_matrix[i].resize(pn_sz);
+
+	for (int i = 0; i < pn_sz; ++i) {
+		vector<double> thresholds(2);
+		for (int j = 0; j < 2; ++j) thresholds[j] = threshold_matrix[j][i];
+	
+		vector<double> ret = CandidateKthRunTime(efficient, path, pattern_numbers[i], thresholds, database);
+		for (int j = 0; j < 2; ++j) {
+			execution_time_matrix[j][i] = ret[j];
+		}
+		cout << i + 1 << "/" << pn_sz << "finished.\n";
+	}
+
+	// Save Execution Time Matrix
+	ofstream outfile2(path + "/Experiment/ExecutionMatrix.txt");
+	for (int i = 0; i < pn_sz; ++i) {
+		outfile2 << pattern_numbers[i];
+		if (i + 1 < pn_sz) outfile2 << "\t";
+		else outfile2 << "\n";
+	}
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < pn_sz; ++j) {
+			outfile2 << execution_time_matrix[i][j];
+			if (j + 1 < pn_sz) outfile2 << "\t";
+		}
+		if (i + 1 < 2) outfile2 << "\n";
+	}
+
+	cout << "finished.\n";
+}
+
+// This function return the minimum threshold number for each pattern type.
+vector<double> Tester::CandidateKthThreshold(string path, int top_patterns) {
+	vector<double> k_th_threshold(2);
+
+	string fileRecency = path + "fold_RECENCY";
+	string fileCompactness = path + "fold_COMPACTNESS";
+	auto recency_pattern_set = LoadFrequentPatterns(fileRecency, RECENCY);
+	auto compactness_pattern_set = LoadFrequentPatterns(fileCompactness, COMPACTNESS);
+	PatternSetAnalysis RM(recency_pattern_set, RECENCY);
+	PatternSetAnalysis CM(compactness_pattern_set, COMPACTNESS);
+	RM.set_pattern_num_lim(top_patterns);
+	CM.set_pattern_num_lim(top_patterns);
+	k_th_threshold[0] = RM.GetLastThreshold();
+	k_th_threshold[1] = CM.GetLastThreshold();
+	if (top_patterns == 4000 || top_patterns == 5000) {
+		auto pattern_set = RM.active_patterns;
+		int sz = pattern_set.size();
+		double mini = 1000000.0;
+		for (int j = 0; j < 1000; ++j) {
+			mini = std::min(mini, pattern_set[sz - 1 - j].frequency);
+			//printf("%lf\n", pattern_set[sz - 1 - j].frequency);
+		}
+		printf("sz: %d, mini: %.10lf\n", sz, mini);
+	}
+	printf("(%lf, %lf) (%lf %lf)\n", k_th_threshold[0], RM.GetLastFrequency(), k_th_threshold[1], CM.GetLastFrequency());
+	return k_th_threshold;
+}
+
+vector<double> Tester::CandidateKthRunTime(int efficient, string path, int top_patterns, vector<double> thresholds, Database &database) {
+	printf("Execution Time Test for K: %d\n", top_patterns);
+
+	PatternMiner recency_miner, compactness_miner;
+
+	// upperbound set to frequency support
+	recency_miner.efficient_upperbound = efficient;
+	compactness_miner.efficient_upperbound = efficient;
+
+	recency_miner.LoadTrainingDatabase(database.get_full_db());
+	compactness_miner.LoadTrainingDatabase(database.get_full_db());
+	recency_miner.Run(0.00039, thresholds[0], RECENCY);
+	compactness_miner.Run(0.00039, thresholds[1], COMPACTNESS);
+
+	//string filename1 = path + "what1.txt";
+	//string filename2 = path + "what2.txt";
+	//recency_miner.WritePatternFile(filename1);
+	//compactness_miner.WritePatternFile(filename2);
+	vector<double> candidate_gen(2);
+
+	candidate_gen[0] = recency_miner.GetNodeCnt();
+	candidate_gen[1] = compactness_miner.GetNodeCnt();
+
+	return candidate_gen;
+}
+
 void Tester::fold_divider(int fold_size, double transition_ratio_init_threshold, double transition_threshold, double ratio_threshold, double frequency_threshold, const string& path, Database &database) {
 	
 	printf("Dividing dataset %d folds\n", fold_size);
@@ -852,6 +988,12 @@ vector<double> Tester::KthRunTime(string path, int top_patterns, vector<double> 
 	return mining_time;
 }
 
+
+// bring up the whole database
+// do the pattern run
+// save it
+// get the nth pattern
+// do it again
 
 void Tester::ExperimentTimeNaive(int fold_size, string path, string dataset_path, vector<int> pattern_numbers) {
 	const int pn_sz = static_cast<int>(pattern_numbers.size());
