@@ -72,7 +72,7 @@ void BMSView2Test() {
 
 	T.set_result_filename(result_filename);
 
-	T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
+	//T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
 	
 	//T.MineDatabase(RECENCY, transition_threshold, path, database);
 	//T.MineDatabase(COMPACTNESS, ratio_threshold, path, database);
@@ -120,7 +120,7 @@ void FIFATest() {
 	//T.MineDatabase(COMPACTNESS, ratio_threshold, path, database);
 	vector<int> exe_top_pattern_numbers = { 5000, 8000, 11000, 14000, 17000 };
 	//T.CandidateGenTest(0, path, "Data/FIFA/FIFA.txt", exe_top_pattern_numbers);
-	T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
+	//T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
 	vector<int> top_pattern_numbers = { 1000, 1500, 2000, 2500, 3000 };
 	//T.WriteTopPatternInfo(fold_size, path, top_pattern_numbers);
 	
@@ -159,8 +159,8 @@ void ExampleTest() {
 }
 
 int main() {
+	BMSView1Test();
 	BMSView2Test();
-	//BMSView1Test();
 	FIFATest();
 	//FifaDataProcess("Data/FIFA/FIFA20450.txt");
 	//DataGenerate();
