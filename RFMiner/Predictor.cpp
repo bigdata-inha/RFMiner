@@ -120,9 +120,13 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 				gap_matches.push_back(abs(gaps[i] - pattern_gaps[i]));
 			}
 			int gap_matches_sz = static_cast<int>(gap_matches.size());
+			//transition_difference = 1000000.0;
 			for (int i = 0; i < gap_matches_sz; ++i) {
 				transition_difference += gap_matches[i];
+				//transition_difference = std::min(transition_difference, gap_matches[i]);
 			}
+			// this is newly added feature
+			transition_difference /= static_cast<double>(gap_matches.size());
 			transition_score = 1.0 / (transition_difference + 1.0) * pattern.confidence;
 
 			if (max_transition_score < transition_score) {
