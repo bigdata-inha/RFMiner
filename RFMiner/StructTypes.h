@@ -125,13 +125,13 @@ struct PatternInstance {
 		double nominator = 0.0;
 		double denominator = 0.0;
 
-		if (type == 1) {
+		if (type == RECENCY) {
 			for (int i = 0; i < sz; ++i) {
 				nominator += static_cast<double>((i + 1));
 				denominator += static_cast<double>((landmark.back() - landmark[i] + 1));
 			}
 		}
-		else if (type == 2) {
+		else if (type == COMPACTNESS) {
 			nominator = static_cast<double>(landmark.size());
 			denominator = static_cast<double>((landmark.back() - landmark.front() + 1));
 		}
