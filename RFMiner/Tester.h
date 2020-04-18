@@ -95,7 +95,7 @@ struct PatternSetAnalysis {
 		}
 		vector<Pattern> vec;		
 		for (int i = 0; i < sz; ++i) {
-			assert(patterns[i].interestingness >= patterns[i + 1].interestingness);
+			if(i + 1 < sz) assert(patterns[i].interestingness >= patterns[i + 1].interestingness);
 			vec.push_back(patterns[i]);
 		}
 		printf("last interesting value: %lf, size of active patterns: %d\n", vec.back().interestingness, vec.size());
