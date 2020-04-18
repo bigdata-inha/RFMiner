@@ -104,12 +104,10 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 			double weight = -1.0;	
 
 			int j = pattern_sz - 2;
-			int pre = query_sz;
 			for (int i = pi.r; i >= pi.l; --i) {
 				if (query_sequence[i] == pattern_sequence[j]) {
 					if (j == 0) assert(i == pi.l);
-					gaps.push_back(static_cast<double>(pre - i));
-					pre = i;
+					gaps.push_back(static_cast<double>(query_sz - i + 1));
 					--j;
 				}
 			}

@@ -148,7 +148,7 @@ struct PatternInstance {
 		vector<double> gap_sequence;
 		int lsz = static_cast<int>(landmark.size());
 		for (int i = 0; i < lsz - 1; ++i) {
-			gap_sequence.push_back(static_cast<double>(landmark[i + 1] - landmark[i]));
+			gap_sequence.push_back(static_cast<double>(landmark.back() - landmark[i] + 1));
 		}
 		return gap_sequence;
 	}
