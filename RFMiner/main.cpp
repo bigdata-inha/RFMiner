@@ -6,133 +6,101 @@
 #include "PatternMiner.h"
 
 void BMSView1Test() {
-	Tester T;
+	Tester testerAgent;
 	Database database;
-	database.ReadDataSpmfFormat("Data/BMS1/BMSWebView(KDDCUP)59601.txt");
-	database.print_stats();
+	string testResultOutputPath = "Data/BMS1/Test";
 
-	database.CalculateTFIDF();
-	T.LoadDatabase(database);
+	database.readNegOneDelimiterFormat("Data/BMS1/BMSWebView(KDDCUP)59601.txt");
+	database.printDatabaseInformation();
 
-	int fold_size = 5;
-	double transition_ratio_init_threshold = 0.0005;
-	double transition_threshold = 0.0005;
-	double ratio_threshold = 0.0005;
-	double frequency_threshold = 0.0006;
-	int pattern_num_lim = 200;
-	double split_ratio = 0.5;
+	testerAgent.LoadDatabase(database);
+
+	// Fold Dividing and Prediction Test
+	// Dividing Dabase into folds
+	const int numberOfFolds = 5;
+	const double foldDividingTestThreshold = 0.00045;
+	const double recencyAndCompactnessInitialThreshold = 0.00045;
+	const double recencyThreshold = 0.0005;
+	const double compatnessThreshold = 0.00045;
+	const double presenceThreshold = 0.0006;
+	testerAgent.fold_divider(numberOfFolds, recencyAndCompactnessInitialThreshold, recencyThreshold, compatnessThreshold, presenceThreshold, testResultOutputPath, database);
+
+	// Prediction Test
 	int topk = 1;
-	string config = "[" + to_string(fold_size) + ", " + to_string(transition_threshold) + ", " + to_string(ratio_threshold) + ", " + to_string(frequency_threshold) + "]";
-
-	string path = "Data/BMS1/Test/";
-	string result_filename = path + "result" + config + ".txt";
-
-	T.set_result_filename(result_filename);
-
-	//T.MineDatabase(RECENCY, transition_threshold, path, database);
-	//T.MineDatabase(COMPACTNESS, ratio_threshold, path, database);
-
-	//T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
-	
-	vector<int> top_pattern_numbers = { 1000, 1500, 2000, 2500, 3000 };
-	//T.WriteTopPatternInfo(fold_size, path, top_pattern_numbers);
-
-	vector<int> exe_top_pattern_numbers = { 4000, 5000 };
-	//T.ExecutionTimeTest(fold_size, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", exe_top_pattern_numbers);
-	//T.CandidateGenTest(0, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", exe_top_pattern_numbers);
-
-	vector<int> naive_pattern_numbers = { 1000, 2000, 3000, 4000, 5000 };
-	//T.ExperimentTimeNaive(fold_size, path, "Data/BMS1/BMSWebView(KDDCUP)59601.txt", naive_pattern_numbers);
-
 	vector<double> split_ratio_vec = { 0.1, 0.3, 0.5, 0.7, 0.9 };
-	T.ExperimentTopK(fold_size, path, topk, database.get_rep(), top_pattern_numbers, split_ratio_vec);
+	vector<int> numberOfTopPatternsForPredictionTest = { 1000, 1500, 2000, 2500, 3000 };
+	testerAgent.ExperimentTopK(numberOfFolds, testResultOutputPath, topk, database.isThereDuplicatedItermsInSingleEventSequence(), numberOfTopPatternsForPredictionTest, split_ratio_vec);
 }
 
 void BMSView2Test() {
-	Tester T;
+	Tester testerAgent;
 	Database database;
-	database.ReadDataSpmfFormat("Data/BMS2/BMSWebView2(KDDCUP)77512.txt");
-	database.print_stats();
+	string testResultOutputPath = "Data/BMS2/Test";
 
-	database.CalculateTFIDF();
-	T.LoadDatabase(database);
+	database.readNegOneDelimiterFormat("Data/BMS2/BMSWebView2(KDDCUP)77512.txt");
+	database.printDatabaseInformation();
 
-	int fold_size = 5;
-	double transition_ratio_init_threshold = 0.0013;
-	double transition_threshold = 0.0013;
-	double ratio_threshold = 0.0013;
-	double frequency_threshold = 0.0013;
-	int pattern_num_lim = 2000;
-	double split_ratio = 0.1;
+	testerAgent.LoadDatabase(database);
+
+	// Fold Dividing and Prediction Test
+	// Dividing Dabase into folds
+	const int numberOfFolds = 5;
+	const double foldDividingTestThreshold = 0.0013;
+	const double recencyAndCompactnessInitialThreshold = foldDividingTestThreshold;
+	const double recencyThreshold = foldDividingTestThreshold;
+	const double compatnessThreshold = foldDividingTestThreshold;
+	const double presenceThreshold = foldDividingTestThreshold;
+	testerAgent.fold_divider(numberOfFolds, recencyAndCompactnessInitialThreshold, recencyThreshold, compatnessThreshold, presenceThreshold, testResultOutputPath, database);
+
+	// Prediction Test
 	int topk = 1;
-	string config = "[" + to_string(fold_size) + ", " + to_string(transition_threshold) + ", " + to_string(ratio_threshold) + ", " + to_string(frequency_threshold) + "]";
-
-	string path = "Data/BMS2/Test/";
-	string result_filename = path + "result" + config + ".txt";
-
-	T.set_result_filename(result_filename);
-
-	//T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
-	
-	//T.MineDatabase(RECENCY, transition_threshold, path, database);
-	//T.MineDatabase(COMPACTNESS, ratio_threshold, path, database);
-	vector<int> exe_top_pattern_numbers = { 10000, 20000, 30000, 40000, 50000 };
-	//T.CandidateGenTest(0, path, "Data/BMS2/BMSWebView2(KDDCUP)77512.txt", exe_top_pattern_numbers);
-
-	vector<int> top_pattern_numbers = { 1000, 1500, 2000, 2500, 3000 };
-	//T.WriteTopPatternInfo(fold_size, path, top_pattern_numbers);
-
-	int efficient_upperbound = 0;
-	//T.ExecutionTimeTest(fold_size, path, "Data/BMS2/BMSWebView2(KDDCUP)77512.txt", exe_top_pattern_numbers);
-
-	vector<int> naive_pattern_numbers = { 1000, 2000, 3000, 4000, 5000 };
-	//T.ExperimentTimeNaive(fold_size, path, "Data/BMS2/BMSWebView2(KDDCUP)77512.txt", naive_pattern_numbers);
-
 	vector<double> split_ratio_vec = { 0.1, 0.3, 0.5, 0.7, 0.9 };
-	T.ExperimentTopK(fold_size, path, topk, database.get_rep(), top_pattern_numbers, split_ratio_vec);
+	vector<int> numberOfTopPatternsForPredictionTest = { 1000, 1500, 2000, 2500, 3000 };
+	testerAgent.ExperimentTopK(numberOfFolds, testResultOutputPath, topk, database.isThereDuplicatedItermsInSingleEventSequence(), numberOfTopPatternsForPredictionTest, split_ratio_vec);
 }
 
 void FIFATest() {
-	Tester T;
+	Tester testerAgent;
 	Database database;
-	database.ReadDataSpmfFormat("Data/FIFA/FIFA.txt");
-	database.print_stats();
+	string testResultOutputPath = "Data/FIFA/Test";
 
-	database.CalculateTFIDF();
-	T.LoadDatabase(database);
+	database.readNegOneDelimiterFormat("Data/FIFA/FIFA.txt");
+	database.printDatabaseInformation();
 
-	int fold_size = 5;
-	double transition_ratio_init_threshold = 0.008;
-	double transition_threshold = 0.008;
-	double ratio_threshold = 0.008;
-	double frequency_threshold = 0.008;
-	int pattern_num_lim = 20;
-	double split_ratio = 0.1;
+	testerAgent.LoadDatabase(database);
+
+	// Fold Dividing and Prediction Test
+	// Dividing Dabase into folds
+	const int numberOfFolds = 5;
+	const double foldDividingTestThreshold = 0.008;
+	const double recencyAndCompactnessInitialThreshold = foldDividingTestThreshold;
+	const double recencyThreshold = foldDividingTestThreshold;
+	const double compatnessThreshold = foldDividingTestThreshold;
+	const double presenceThreshold = foldDividingTestThreshold;
+	testerAgent.fold_divider(numberOfFolds, recencyAndCompactnessInitialThreshold, recencyThreshold, compatnessThreshold, presenceThreshold, testResultOutputPath, database);
+
+	// Prediction Test
 	int topk = 1;
-	string config = "[" + to_string(fold_size) + ", " + to_string(transition_threshold) + ", " + to_string(ratio_threshold) + ", " + to_string(frequency_threshold) + "]";
-
-	string path = "Data/FIFA/Test/";
-	string result_filename = path + "result" + config + ".txt";
-
-	T.set_result_filename(result_filename);
-
-	//T.MineDatabase(RECENCY, transition_threshold, path, database);
-	//T.MineDatabase(COMPACTNESS, ratio_threshold, path, database);
-	vector<int> exe_top_pattern_numbers = { 5000, 8000, 11000, 14000, 17000 };
-	//T.CandidateGenTest(0, path, "Data/FIFA/FIFA.txt", exe_top_pattern_numbers);
-	//T.fold_divider(fold_size, transition_ratio_init_threshold, transition_threshold, ratio_threshold, frequency_threshold, path, database);
-	vector<int> top_pattern_numbers = { 1000, 1500, 2000, 2500, 3000 };
-	//T.WriteTopPatternInfo(fold_size, path, top_pattern_numbers);
-	
-	int efficient_upperbound = 0;
-	//T.ExecutionTimeTest(fold_size, path, "Data/FIFA/FIFA.txt", exe_top_pattern_numbers);
-
-	vector<int> naive_pattern_numbers = { 5000, 8000, 11000, 14000, 17000 };
-	//T.ExperimentTimeNaive(fold_size, path, "Data/FIFA/FIFA.txt", naive_pattern_numbers);
-
 	vector<double> split_ratio_vec = { 0.1, 0.3, 0.5, 0.7, 0.9 };
-	T.ExperimentTopK(fold_size, path, topk, database.get_rep(), top_pattern_numbers, split_ratio_vec);
+	vector<int> numberOfTopPatternsForPredictionTest = { 1000, 1500, 2000, 2500, 3000 };
+	testerAgent.ExperimentTopK(numberOfFolds, testResultOutputPath, topk, database.isThereDuplicatedItermsInSingleEventSequence(), numberOfTopPatternsForPredictionTest, split_ratio_vec);
 }
+
+int main() {
+	BMSView1Test();
+	BMSView2Test();
+	FIFATest();
+	//KosarakTest();
+	//BibleTest();
+	//MSNBCTest();
+	//SIGNTest();
+	//retailTest();
+	//foodmartTest();
+	//chainstoreTest();
+	getchar();
+}
+
+// archive
 
 void ExampleTest() {
 	Database database;
