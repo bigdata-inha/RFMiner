@@ -30,8 +30,8 @@ void FileIdenticalCheck(const string &source, const string &target) {
 
 void CorrectnessCheck() {
 	Database database;
-	database.ReadDataSpmfFormat("DebugTestSet/Example.txt");
-	database.print_stats();
+	database.readNegOneDelimiterFormat("DebugTestSet/Example.txt");
+	database.printDatabaseInformation();
 
 	PatternMiner transition_version;
 	PatternMiner ratio_version;
@@ -103,8 +103,8 @@ void DataGenerate() {
 
 void TfIdfTableCheck() {
 	Database database;
-	database.ReadDataSpmfFormat("DebugTestSet/Example.txt");
-	database.print_stats();
+	database.readNegOneDelimiterFormat("DebugTestSet/Example.txt");
+	database.printDatabaseInformation();
 	database.CalculateTFIDF();
 	database.WriteTfIdfTable("DebugTestSet/TFIDF.txt");
 }

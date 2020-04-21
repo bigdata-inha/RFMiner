@@ -64,7 +64,7 @@ void Tester::CandidateGenTest(int efficient, string path, string dataset_path, v
 	}
 
 	Database database;
-	database.ReadDataSpmfFormat(dataset_path);
+	database.readNegOneDelimiterFormat(dataset_path);
 	vector<vector<double>> execution_time_matrix(2);
 	for (int i = 0; i < 2; ++i) execution_time_matrix[i].resize(pn_sz);
 
@@ -159,7 +159,7 @@ void Tester::fold_divider(int fold_size, double transition_ratio_init_threshold,
 	PrefixSpan frequency_version;
 
 	database.set_fold(fold_size);
-	database.print_stats();
+	database.printDatabaseInformation();
 
 	auto start = std::chrono::high_resolution_clock::now();
 	auto stop = std::chrono::high_resolution_clock::now();
@@ -869,7 +869,7 @@ void Tester::ExecutionTimeTest(int fold_size, string path, string dataset_path, 
 	}
 
 	Database database;
-	database.ReadDataSpmfFormat(dataset_path);
+	database.readNegOneDelimiterFormat(dataset_path);
 	vector<vector<double>> execution_time_matrix(3);
 	for (int i = 0; i < 3; ++i) execution_time_matrix[i].resize(pn_sz);
 
@@ -1020,7 +1020,7 @@ void Tester::ExperimentTimeNaive(int fold_size, string path, string dataset_path
 		}
 
 		Database database;
-		database.ReadDataSpmfFormat(dataset_path);
+		database.readNegOneDelimiterFormat(dataset_path);
 		vector<double> execution_time(pn_sz);
 
 		for (int i = 0; i < pn_sz; ++i) {

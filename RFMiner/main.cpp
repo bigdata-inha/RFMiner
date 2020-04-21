@@ -104,8 +104,8 @@ int main() {
 
 void ExampleTest() {
 	Database database;
-	database.ReadDataSpmfFormat("b.txt");
-	database.print_stats();
+	database.readNegOneDelimiterFormat("b.txt");
+	database.printDatabaseInformation();
 
 	double transition_ratio_init_threshold = 0.168;
 	double transition_threshold = 0.168;
