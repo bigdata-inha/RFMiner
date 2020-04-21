@@ -7,7 +7,7 @@ public:
 	Database() {};
 	~Database() {};
 
-	void ReadDataSpmfFormat(string file);
+	void readNegOneDelimiterFormat(string file);
 
 	void set_fold(unsigned int k);
 	vector<Sequence> get_full_db();
@@ -15,10 +15,10 @@ public:
 	vector<Sequence> get_test_db(int fold_num);
 
 	unsigned int size();
-	void print_stats();
+	void printDatabaseInformation();
 
 	unsigned int get_max_seq_len() { return max_len; }
-	int get_rep() { return rep; }
+	int isThereDuplicatedItermsInSingleEventSequence() { return rep; }
 
 	void CalculateTFIDF();
 

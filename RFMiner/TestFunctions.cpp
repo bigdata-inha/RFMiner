@@ -1,46 +1,17 @@
+#include "Database.h"
+#include "prefixSpan.h"
+#include "Predictor.h"
+#include "Tester.h"
 #include "TestFunctions.h"
+#include "PatternMiner.h"
 
-#define TEST_FILE "Test/test.txt"
-#define TEST_RECENCY_FILE "Test/RecencyResult.txt"
-#define TEST_COMPACTNESS_FILE "Test/CompactnessResult.txt"
-#define TEST_PRESENCE_FILE "Test/PresenceResult.txt"
-#define ANSWER_RECENCY_FILE "Test/RecencyAnswer.txt"
-#define ANSWER_COMPACTNESS_FILE "Test/CompactnessAnswer.txt"
-#define ANSWER_PRESENCE_FILE "Test/PresenceAnswer.txt"
-#define THRESHOLD 0.13
 
-void DebugMinerCorrectnessCheck() {
-	MinerCorrectnessCheck();
-	FileIdenticalCheck(TEST_RECENCY_FILE, ANSWER_RECENCY_FILE);
-	FileIdenticalCheck(TEST_COMPACTNESS_FILE, ANSWER_COMPACTNESS_FILE);
-	FileIdenticalCheck(TEST_PRESENCE_FILE, ANSWER_PRESENCE_FILE);
+void DebugCorrectnessCheck() {
+	CorrectnessCheck();
+	FileIdenticalCheck("DebugTestSet/TransitionResult.txt", "DebugTestSet/TransitionAnswer.txt");
+	FileIdenticalCheck("DebugTestSet/RatioResult.txt", "DebugTestSet/RatioAnswer.txt");
+	FileIdenticalCheck("DebugTestSet/FrequencyResult.txt", "DebugTestSet/FrequencyAnswer.txt");
 	cout << "Correct!\n";
-}
-
-void MinerCorrectnessCheck() {
-	Database database;
-	database.ReadDataSpmfFormat(TEST_FILE);
-	database.print_stats();
-	//database.printDatabase();
-
-	PatternMiner recencyMiner;
-	PatternMiner compactnessMiner;
-	PrefixSpan presenceMiner;
-
-	// Loading databases to pattern miners
-	recencyMiner.LoadTrainingDatabase(database.get_full_db());
-	compactnessMiner.LoadTrainingDatabase(database.get_full_db());
-	presenceMiner.LoadTrainDatabase(database.get_full_db());
-
-	// Run Pattern Miners
-	recencyMiner.Run(THRESHOLD, THRESHOLD, RECENCY);
-	compactnessMiner.Run(THRESHOLD, THRESHOLD, COMPACTNESS);
-	presenceMiner.Run(THRESHOLD);
-
-	// Wrtie test result files
-	recencyMiner.WritePatternFile(TEST_RECENCY_FILE);
-	compactnessMiner.WritePatternFile(TEST_COMPACTNESS_FILE);
-	presenceMiner.WriteFile(TEST_PRESENCE_FILE);
 }
 
 void FileIdenticalCheck(const string &source, const string &target) {
@@ -55,6 +26,33 @@ void FileIdenticalCheck(const string &source, const string &target) {
 			exit(-1);
 		}
 	}
+}
+
+void CorrectnessCheck() {
+	Database database;
+	database.readNegOneDelimiterFormat("DebugTestSet/Example.txt");
+	database.printDatabaseInformation();
+
+	PatternMiner transition_version;
+	PatternMiner ratio_version;
+	PrefixSpan frequency_version;
+
+	double transition_ratio_init_threshold = 0.13;
+	double transition_threshold = 0.13;
+	double ratio_threshold = 0.13;
+	double frequency_threshold = 0.13;
+
+	transition_version.LoadTrainingDatabase(database.get_full_db());
+	ratio_version.LoadTrainingDatabase(database.get_full_db());
+	frequency_version.LoadTrainDatabase(database.get_full_db());
+
+	transition_version.Run(transition_ratio_init_threshold, transition_threshold, 1);
+	ratio_version.Run(transition_ratio_init_threshold, ratio_threshold, 2);
+	frequency_version.Run(frequency_threshold);
+
+	transition_version.WritePatternFile("DebugTestSet/TransitionResult.txt");
+	ratio_version.WritePatternFile("DebugTestSet/RatioResult.txt");
+	frequency_version.WriteFile("DebugTestSet/FrequencyResult.txt");
 }
 
 void DataGenerate() {
@@ -100,12 +98,13 @@ void DataGenerate() {
 		}
 		else break;
 	}
+
 }
 
 void TfIdfTableCheck() {
 	Database database;
-	database.ReadDataSpmfFormat("DebugTestSet/Example.txt");
-	database.print_stats();
+	database.readNegOneDelimiterFormat("DebugTestSet/Example.txt");
+	database.printDatabaseInformation();
 	database.CalculateTFIDF();
 	database.WriteTfIdfTable("DebugTestSet/TFIDF.txt");
 }
@@ -163,4 +162,5 @@ void FifaDataProcess(const string &filename) {
 		}
 		seq.push_back(x);
 	}
+
 }

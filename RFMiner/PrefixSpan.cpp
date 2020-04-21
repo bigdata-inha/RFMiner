@@ -2,13 +2,17 @@
 #include "PrefixSpan.h"
 
 PrefixSpan::PrefixSpan() { 
-	cnt = 0;
+	node_cnt = 1ULL;
 	naive = 0;
 }
 PrefixSpan::~PrefixSpan(){}
 
 void PrefixSpan::ClearTraining() {
 	frequent_patterns_.clear();
+}
+
+int PrefixSpan::GetNodeCnt() {
+	return node_cnt;
 }
 
 void PrefixSpan::LoadTrainDatabase(vector<Sequence> database) {
@@ -33,6 +37,7 @@ vector<unordered_set<int>> PrefixSpan::GetPatternCovers() {
 
 void PrefixSpan::Run(double frequency_minsup) {
 	frequency_minsup_ = frequency_minsup;
+	node_cnt++;
 	cout << "running on minsup " << frequency_minsup_ << "\n";
 
 	// Counting
@@ -102,7 +107,7 @@ void PrefixSpan::Span(vector<int>pattern, vector<PseudoProjectedDatabaseEntry> &
 		}
 	}
 
-	cnt++;
+	node_cnt++;
 	// for all counted items
 	for (const auto&entry : candidate_set) {
 		const int &item = entry;

@@ -1,11 +1,15 @@
 #include "PatternMiner.h"
 
 PatternMiner::PatternMiner() {
-	cnt = 0;
 	efficient_upperbound = 1;
+	node_cnt_ = 0ULL;
 }
 
 PatternMiner::~PatternMiner() {}
+
+int PatternMiner::GetNodeCnt() {
+	return node_cnt_;
+}
 
 void PatternMiner::ClearPatterns() {
 	sequential_patterns_.clear();
@@ -26,7 +30,9 @@ void PatternMiner::LoadTestDatabase(vector<Sequence> database) {
 void PatternMiner::Run(double init_threshold, double threshold, int option) {
 	init_threshold_ = init_threshold;
 	threshold_ = threshold;
+	printf("threshold: %lf\n", threshold_);
 	option_ = option;
+	node_cnt_++;
 
 	unordered_map<int, unordered_set<int>> inverted_list;
 	unordered_map<int, vector<PatternInstance>> item2pattern_instances;
@@ -65,65 +71,9 @@ vector<Pattern> PatternMiner::GetSequentialPatterns() {
 	return sequential_patterns_;
 }
 
-//void PatternMiner::WritePatternFile(string filename) {
-//	ofstream outfile(filename);
-//	if (sequential_patterns_.empty()) return;
-//	sort(sequential_patterns_.begin(), sequential_patterns_.end());
-//	if (sequential_patterns_[0].type == 1) {
-//		int sz = static_cast<int>(sequential_patterns_.size());
-//		for (int i = 0; i < sz; ++i) {
-//			const auto &entry = sequential_patterns_[i];
-//			int pattern_length = static_cast<int>(entry.pattern.size());
-//			string line;
-//			for (int j = 0; j < pattern_length; ++j) {
-//				line += std::to_string(entry.pattern[j]) + " ";
-//			}
-//			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + "\n";
-//			for (int j = 0; j < pattern_length - 1; ++j) {
-//				line += std::to_string(entry.gap_sequence[j]);
-//				if (j + 1 != pattern_length - 1) line += " ";
-//			}
-//			if (i + 1 != sz) line += "\n";
-//			outfile << line;
-//		}
-//	}
-//	else if (sequential_patterns_[0].type == 2) {
-//		int sz = static_cast<int>(sequential_patterns_.size());
-//		for (int i = 0; i < sz; ++i) {
-//			const auto &entry = sequential_patterns_[i];
-//			int pattern_length = static_cast<int>(entry.pattern.size());
-//			string line;
-//			for (int j = 0; j < pattern_length; ++j) {
-//				line += std::to_string(entry.pattern[j]) + " ";
-//			}
-//			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + "\n";
-//			line += std::to_string(entry.gap_sequence.front()) + "\n";
-//			outfile << line;
-//		}
-//	}
-//	else if (sequential_patterns_[0].type == 3) {
-//		int sz = static_cast<int>(sequential_patterns_.size());
-//		for (int i = 0; i < sz; ++i) {
-//			const auto &entry = sequential_patterns_[i];
-//			int pattern_length = static_cast<int>(entry.pattern.size());
-//			string line;
-//			for (int j = 0; j < pattern_length; ++j) {
-//				line += std::to_string(entry.pattern[j]) + " ";
-//			}
-//			line += "-1 " + std::to_string(entry.frequency);
-//			if (i + 1 != sz) line += "\n";
-//			outfile << line;
-//		}
-//	}
-//	else {
-//		printf("Error in type: WriteFile()\n");
-//		getchar();
-//		exit(-1);
-//	}
-//}
-
 void PatternMiner::WritePatternFile(string filename) {
 	ofstream outfile(filename);
+	outfile.precision(20);
 	if (sequential_patterns_.empty()) return;
 	sort(sequential_patterns_.begin(), sequential_patterns_.end());
 	if (sequential_patterns_[0].type == 1) {
@@ -133,15 +83,24 @@ void PatternMiner::WritePatternFile(string filename) {
 			int pattern_length = static_cast<int>(entry.pattern.size());
 			string line;
 			for (int j = 0; j < pattern_length; ++j) {
-				line += std::to_string(entry.pattern[j]) + " ";
+				outfile << entry.pattern[j] << " ";
+				//line += std::to_string(entry.pattern[j]) + " ";
 			}
-			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence) + "\n";
+			outfile << "-1 " << std::setprecision(20) << entry.interestingness << " " << std::setprecision(20) << entry.frequency << " " << std::setprecision(20)<<entry.confidence << "\n";
+			//line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence) + "\n";
 			for (int j = 0; j < pattern_length - 1; ++j) {
-				line += std::to_string(entry.gap_sequence[j]);
-				if (j + 1 != pattern_length - 1) line += " ";
+				outfile << entry.gap_sequence[j];
+				//line += std::to_string(entry.gap_sequence[j]);
+				if (j + 1 != pattern_length - 1) {
+					//line += " ";
+					outfile << " ";
+				}
 			}
-			if (i + 1 != sz) line += "\n";
-			outfile << line;
+			if (i + 1 != sz) {
+				outfile << "\n";
+				//line += "\n";
+			}
+			//outfile << line;
 		}
 	}
 	else if (sequential_patterns_[0].type == 2) {
@@ -149,13 +108,11 @@ void PatternMiner::WritePatternFile(string filename) {
 		for (int i = 0; i < sz; ++i) {
 			const auto &entry = sequential_patterns_[i];
 			int pattern_length = static_cast<int>(entry.pattern.size());
-			string line;
 			for (int j = 0; j < pattern_length; ++j) {
-				line += std::to_string(entry.pattern[j]) + " ";
+				outfile << entry.pattern[j] << " ";
 			}
-			line += "-1 " + std::to_string(entry.interestingness) + " " + std::to_string(entry.frequency) + " " + std::to_string(entry.confidence) + "\n";
-			line += std::to_string(entry.gap_sequence.front()) + "\n";
-			outfile << line;
+			outfile << "-1 " << std::setprecision(20) << entry.interestingness << " " << std::setprecision(20) << entry.frequency << " " << std::setprecision(20) << entry.confidence << "\n";
+			outfile << entry.gap_sequence.front() << "\n";
 		}
 	}
 }
@@ -177,7 +134,7 @@ void PatternMiner::WriteQueryFile(string filename) {
 
 
 void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set, double pre_interesting) {
-	cnt++;
+	node_cnt_++;
 
 	const int pattern_length = static_cast<int>(pattern.size());
 	const int plus_pattern_len = pattern_length + 1;
@@ -196,10 +153,11 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set,
 	unordered_map<int, double> min_instance;
 	unordered_map<int, unordered_set<int>> inverted_list;
 
-	unordered_map<int, vector<PatternInstance>> item2pattern_instances = GrowNew(pi_set, pattern.back(), max_length_map, min_instance, inverted_list);
+	unordered_map<int, vector<PatternInstance>> item2pattern_instances = GrowNew(pattern, pi_set, pattern.back(), max_length_map, min_instance, inverted_list);
 
 	for (const auto &entry : item2pattern_instances) {
 		const int e = entry.first;
+
 		pattern.push_back(e); // P+ <- appending event e to pattern P
 		vector<PatternInstance> cur_pi_set = entry.second; // Grow()
 		
@@ -214,16 +172,17 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set,
 		double interestingness = 0.0;
 		double len = 0.0;
 
-		if (option_ == 1) {
+		if (option_ == RECENCY) {
 			unordered_map<int, pair<vector<double>, double>> compact_gaps;
 			unordered_map<int, pair<double, double>> compact_weights;
 			
 			for (const auto& instance : cur_pi_set) {
 				const int id = instance.sid;
 				vector<double> gaps = instance.GapSequence();			
-				double ppl = static_cast<double>(plus_pattern_len);
+				
 				compact_weights[id].first += instance.value;
 				compact_weights[id].second++;
+
 				if (compact_gaps[id].second == 0) {
 					compact_gaps[id].first.resize(gap_length);
 				}
@@ -234,25 +193,31 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set,
 
 			// Gap Sequence Calculation
 			for (auto &entry : compact_gaps) {
-				int sz = static_cast<int>(entry.second.first.size());
+				vector<double> &gaps = entry.second.first;
+				double& number_of_instances_in_a_single_sequence = entry.second.second;
+				int sz = static_cast<int>(gaps.size());
 				for (int i = 0; i < sz; ++i) {
-					pattern_gaps[i] += (entry.second.first[i] / entry.second.second);
+					pattern_gaps[i] += (gaps[i] / number_of_instances_in_a_single_sequence);
 				}
 			}
-			for (auto &entry : pattern_gaps) entry /= static_cast<double>(compact_gaps.size());
+			for (auto &gap : pattern_gaps) gap /= static_cast<double>(compact_gaps.size());
 
 			// Interestingness
-			for (auto &entry : compact_weights) interestingness += entry.second.first / static_cast<double>(entry.second.second);
+			for (const auto &entry : compact_weights) {
+				const double& value = entry.second.first;
+				const double& number_of_instances_in_a_single_sequence = entry.second.second;
+				interestingness += value / number_of_instances_in_a_single_sequence;
+			}
 			interestingness /= static_cast<double>(training_sequencde_database_sz_);
 		}
-		else if(option_ == 2){
-			unordered_map<int, pair<double, double>> tracker;
+		else if(option_ == COMPACTNESS){
+			unordered_map<int, pair<double, double>> value_tracker;
 			unordered_map<int, pair<double, double>> length_tracker;
 
 			for (const auto & entry : cur_pi_set) {
 				int id = entry.sid;
-				tracker[id].first += entry.value;
-				tracker[id].second++;
+				value_tracker[id].first += entry.value;
+				value_tracker[id].second++;
 				length_tracker[id].first += entry.denom;
 				length_tracker[id].second++;
 			}
@@ -262,7 +227,11 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set,
 			len /= static_cast<double>(length_tracker.size());
 			
 			// Interestingness
-			for (const auto & entry : tracker) interestingness += (entry.second.first / entry.second.second);
+			for (const auto & entry : value_tracker) {
+				const double& value = entry.second.first;
+				const double& number_of_instances_in_a_single_sequence = entry.second.second;
+				interestingness += value / number_of_instances_in_a_single_sequence;
+			}
 			interestingness /= static_cast<double>(training_sequencde_database_sz_);
 		}
 	
@@ -273,7 +242,6 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set,
 		double frequency_support = static_cast<double>(vis.size()) / static_cast<double>(training_sequencde_database_sz_);
 
 		double confidence = interestingness / pre_interesting;
-		double max1_confidence = confidence < 1.0 ? confidence : 1.0;
 
 		if (interestingness >= threshold_) {
 			if (option_ == 1) sequential_patterns_.push_back(Pattern(option_, pattern, interestingness, frequency_support, pattern_gaps, confidence));
@@ -294,24 +262,24 @@ void PatternMiner::RFGrowth(vector<int> pattern, vector<PatternInstance> pi_set,
 	}
 }
 
-unordered_map<int, vector<PatternInstance>> PatternMiner::GrowNew(vector<PatternInstance> pi_set, int last_event, unordered_map<int, unordered_map<int, int >> &max_length_map, unordered_map<int, double> &min_instance, unordered_map<int, unordered_set<int>> &inverted_list) {
-	unordered_map<int, vector<PatternInstance>> ret;
+unordered_map<int, vector<PatternInstance>> PatternMiner::GrowNew(vector<int> pattern, vector<PatternInstance> pi_set, int last_event, unordered_map<int, unordered_map<int, int >> &max_length_map, unordered_map<int, double> &min_instance, unordered_map<int, unordered_set<int>> &inverted_list) {
 
+	unordered_map<int, vector<PatternInstance>> instance_set_per_event;
 	int pi_set_sz = static_cast<int>(pi_set.size());
 
 	for (int i = 0; i < pi_set_sz; ++i) {
 		const PatternInstance &pi = pi_set[i];
 		const int id = pi.sid;
-		vector<int> landmark = pi.landmark;
+		const vector<int> &landmark = pi.landmark;
 
 		const vector<int> &S = training_sequence_database_[id].sequence;
-		int sz = static_cast<int>(S.size());
 
 		unordered_set<int> leftmost_vis;
 
-		// check if ajacent pattern instances have the same id
+		int sz = static_cast<int>(S.size());
+		// check if adjacent pattern instances have the same id
 		if (i + 1 < pi_set_sz && id == pi_set[i + 1].sid) {
-			sz = std::min(sz, pi_set[i + 1].r + 1);
+			sz = std::min(sz, pi_set[i + 1].r + 1); //exclusive index
 		}
 
 		bool first = false;
@@ -320,34 +288,32 @@ unordered_map<int, vector<PatternInstance>> PatternMiner::GrowNew(vector<Pattern
 
 			// if not candidate events, then discard
 			if (candidate_events_.find(e) == candidate_events_.end()) continue;
-			
-			// if last event, then adjust  landmark
-			if (e == last_event) {
-				if (!first) {
-					first = true;
-				}
-				else {
-					landmark.pop_back();
-					landmark.push_back(j);
-				}
-			}
 
-			// leftmost visited?
+			// [a x x x b x x c x x c]
 			if (leftmost_vis.find(e) == leftmost_vis.end()) {
 				leftmost_vis.insert(e);
-				int ext_len = static_cast<int>(S.size()) - j;
+				int ext_len = static_cast<int>(S.size()) - 1 - j;
+				vector<int> landmark;
 				landmark.push_back(j);
-				ret[e].push_back(PatternInstance(option_, id, pi.l, j, ext_len, landmark));
-				if(ext_len != 0) max_length_map[e][id] = std::max(max_length_map[e][id], ext_len);
-				if (min_instance.find(e) == min_instance.end()) {
-					min_instance[e] = 100000000.0;
+				int pos = pattern.size() - 1;
+				for (int k = j - 1; k > pi.l; --k) {
+					if (S[k] == pattern[pos]) {
+						assert(pos > 0);
+						--pos;
+						landmark.push_back(k);
+					}
 				}
-				min_instance[e] = std::min(min_instance[e], ret[e].back().denom);
-				landmark.pop_back();
+				landmark.push_back(pi.l);
+				std::reverse(landmark.begin(), landmark.end());
+				PatternInstance pattern_instance = PatternInstance(option_, id, pi.l, j, ext_len, landmark);
+				instance_set_per_event[e].push_back(pattern_instance);
+				if(ext_len != 0) max_length_map[e][id] = std::max(max_length_map[e][id], ext_len);
+				if (min_instance.find(e) == min_instance.end()) min_instance[e] = 100000000.0;
+				min_instance[e] = std::min(min_instance[e], pattern_instance.denom);
 			}
 		}
 	}
-	return ret;
+	return instance_set_per_event;
 }
 
 double PatternMiner::UpperBound(double plus_pattern_len, unordered_map<int, int > max_length_map, double min_instance) {
@@ -367,8 +333,14 @@ double PatternMiner::UpperBound(double plus_pattern_len, unordered_map<int, int 
 		it->second += cnt;
 		--it;
 	}
+	for (auto it = upper_bound_map.begin(); it != upper_bound_map.end(); ++it) {
+		auto it2 = it;
+		it++;
+		if (it == upper_bound_map.end()) break;
+		assert(it->second >= it2->second);
+	}
 
-	if (option_ == 1) {
+	if (option_ == RECENCY) {
 		double P = (double)(plus_pattern_len);
 		for (const auto &entry : upper_bound_map) {
 			double K = (double)(-entry.first);
@@ -382,7 +354,7 @@ double PatternMiner::UpperBound(double plus_pattern_len, unordered_map<int, int 
 		}
 		max_upper /= static_cast<double>(training_sequencde_database_sz_);
 	}
-	else if (option_ == 2) {
+	else if (option_ == COMPACTNESS) {
 		double P = (double)(plus_pattern_len);
 		for (const auto &entry : upper_bound_map) {
 			double K = (double)(-entry.first);

@@ -22,6 +22,7 @@ void Predictor::SetTopPatternNumber(int pattern_num_lim) {
 	top_patterns_sz_ = sz;
 }
 
+
 void Predictor::GenerateRules(const vector<int> &query_sequence, int option, const int &repeat) {
 	for (int i = 0; i < top_patterns_sz_; ++i) {
 		Rule r = CreateRule(top_patterns_[i], query_sequence, option, repeat);
@@ -65,11 +66,9 @@ void Predictor::PrintRuleList(int topK) {
 }
 
 Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequence, int option, const int &repeat) {
-
 	const vector<int>& pattern_sequence = pattern.pattern;
 	const int pattern_sz = static_cast<int>(pattern_sequence.size());
 	const int query_sz = static_cast<int>(query_sequence.size());
-	const vector<double>& pattern_gaps = pattern.gap_sequence;
 
 	// Find minimal landmarks of a pattern P's prefix [1: |P| - 1] in query sequence
 	vector<PatternInstance> pi_set;
@@ -93,74 +92,60 @@ Rule Predictor::CreateRule(const Pattern &pattern, const vector<int> &query_sequ
 	double max_transition_score = -1.0;
 	double max_ratio_score = -1.0;
 	double max_frequency_score = -1.0;
-	int x = -1;
 	vector<double> max_score_gaps;
 	
 	//assert(final_pi_set.size() == 1);
 	for (const auto &pi : final_pi_set) {
-		const int &last_matched_pattern_offset = pattern_sz - 2;
-
-		// P = <a, b, c, d>
-		// Q = <a, x, x, b, c, x, x>
-
-		if (debug_) printf("[%d %d] pattern_offset: %d\n", pi.l, pi.r, last_matched_pattern_offset);
 
 		if (option == RECENCY) {
 			double transition_difference = 0.0;
 			double transition_score = -1.0;
 			vector<double> gaps;
 			double weight = -1.0;	
-		
-			if(debug_) printf("unique\n");
 
-			int pre = query_sz;
-			int cur = last_matched_pattern_offset;
-			for (int i = query_sz - 1; i >= 0 && cur >= 0; --i) {
-				if (query_sequence[i] == pattern_sequence[cur]) {
-					gaps.push_back(static_cast<double>(pre - i));
-					pre = i;
-					--cur;
+			int j = pattern_sz - 2;
+			for (int i = pi.r; i >= pi.l; --i) {
+				if (query_sequence[i] == pattern_sequence[j]) {
+					if (j == 0) assert(i == pi.l);
+					gaps.push_back(static_cast<double>(query_sz - i + 1));
+					--j;
 				}
 			}
 			std::reverse(gaps.begin(), gaps.end());
 
 			vector<double> gap_matches;
 			int gaps_sz = static_cast<int>(gaps.size());
+			const vector<double>& pattern_gaps = pattern.gap_sequence;
 			for (int i = 0; i < gaps_sz; ++i) {
 				gap_matches.push_back(abs(gaps[i] - pattern_gaps[i]));
 			}
 			int gap_matches_sz = static_cast<int>(gap_matches.size());
+			//transition_difference = 1000000.0;
 			for (int i = 0; i < gap_matches_sz; ++i) {
 				transition_difference += gap_matches[i];
+				//transition_difference = std::min(transition_difference, gap_matches[i]);
 			}
-			// pattern.interetingness should be replaced to confidence
+			// this is newly added feature
+			transition_difference /= static_cast<double>(gap_matches.size());
 			transition_score = 1.0 / (transition_difference + 1.0) * pattern.confidence;
 
 			if (max_transition_score < transition_score) {
 				max_transition_score = transition_score;
-				x = last_matched_pattern_offset;
 				max_score_gaps = gap_matches;
 			}
 		}
 		else if (option == COMPACTNESS) {
-			double ratio_difference = abs(pattern.gap_sequence.front() - static_cast<double>((query_sz - pi.l)));
+			double ratio_difference = abs(pattern.gap_sequence.front() - static_cast<double>((query_sz - pi.l + 1)));
 			double ratio_score = 1.0 / (ratio_difference + 1.0) * pattern.confidence;
 			if (max_ratio_score < ratio_score) {
 				max_ratio_score = ratio_score;
-				x = last_matched_pattern_offset;
 			}
 		}
 		else if (option == PRESENCE) {
 			double frequency_score = (pattern.pattern.size() -1) * pattern.confidence;
 			if (max_frequency_score < frequency_score) {
 				max_frequency_score = frequency_score;
-				x = last_matched_pattern_offset;
 			}
-		}
-		else {
-			printf("Error in option CreateRule()");
-			getchar();
-			exit(-1);
 		}
 	}
 

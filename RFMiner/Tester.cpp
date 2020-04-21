@@ -15,6 +15,142 @@ ostream& operator<<(ostream& os, const vector<T>& v)
 	return os;
 }
 
+void Tester::MineDatabase(int type, double threshold, const string& path, Database &database) {
+	string filename = path + "fold_";
+	if (type == RECENCY) {
+		printf("Mining RECENCY patterns\n");
+		filename += "RECENCY";
+	}
+	else if (type == COMPACTNESS) {
+		printf("Mining COMPACTNESS patterns\n");
+		filename += "COMPACTNESS";
+	}
+	else printf("ERROR in mining type\n");
+	if (type == RECENCY || type == COMPACTNESS) {
+		PatternMiner miner;
+		miner.LoadTrainingDatabase(database.get_full_db());
+		miner.Run(threshold, threshold, type);
+		miner.WritePatternFile(filename);
+	}
+}
+
+void Tester::CandidateGenTest(int efficient, string path, string dataset_path, vector<int> pattern_numbers) {
+
+	const int pn_sz = static_cast<int>(pattern_numbers.size());
+	vector<vector<double>> threshold_matrix(2);
+	for (int i = 0; i < 2; ++i) threshold_matrix[i].resize(pn_sz);
+	cout << "Number of K : " << pn_sz << "\n";
+	for (int i = 0; i < pn_sz; ++i) {
+		vector<double> ret = CandidateKthThreshold(path, pattern_numbers[i]);
+		for (int j = 0; j < 2; ++j) {
+			threshold_matrix[j][i] = ret[j];
+		}
+		cout << i + 1 << "/" << pn_sz << " finished.\n";
+	}
+
+	// Save Threshold Matrix
+	ofstream outfile1(path + "/Experiment/ThresholdMatrix.txt");
+	for (int i = 0; i < pn_sz; ++i) {
+		outfile1 << pattern_numbers[i];
+		if (i + 1 < pn_sz) outfile1 << "\t";
+		else outfile1 << "\n";
+	}
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < pn_sz; ++j) {
+			outfile1 << threshold_matrix[i][j];
+			if (j + 1 < pn_sz) outfile1 << "\t";
+		}
+		if (i + 1 < 2) outfile1 << "\n";
+	}
+
+	Database database;
+	database.readNegOneDelimiterFormat(dataset_path);
+	vector<vector<double>> execution_time_matrix(2);
+	for (int i = 0; i < 2; ++i) execution_time_matrix[i].resize(pn_sz);
+
+	for (int i = 0; i < pn_sz; ++i) {
+		vector<double> thresholds(2);
+		for (int j = 0; j < 2; ++j) thresholds[j] = threshold_matrix[j][i];
+	
+		vector<double> ret = CandidateKthRunTime(efficient, path, pattern_numbers[i], thresholds, database);
+		for (int j = 0; j < 2; ++j) {
+			execution_time_matrix[j][i] = ret[j];
+		}
+		cout << i + 1 << "/" << pn_sz << "finished.\n";
+	}
+
+	// Save Execution Time Matrix
+	ofstream outfile2(path + "/Experiment/ExecutionMatrix.txt");
+	for (int i = 0; i < pn_sz; ++i) {
+		outfile2 << pattern_numbers[i];
+		if (i + 1 < pn_sz) outfile2 << "\t";
+		else outfile2 << "\n";
+	}
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < pn_sz; ++j) {
+			outfile2 << execution_time_matrix[i][j];
+			if (j + 1 < pn_sz) outfile2 << "\t";
+		}
+		if (i + 1 < 2) outfile2 << "\n";
+	}
+
+	cout << "finished.\n";
+}
+
+// This function return the minimum threshold number for each pattern type.
+vector<double> Tester::CandidateKthThreshold(string path, int top_patterns) {
+	vector<double> k_th_threshold(2);
+
+	string fileRecency = path + "fold_RECENCY";
+	string fileCompactness = path + "fold_COMPACTNESS";
+	auto recency_pattern_set = LoadFrequentPatterns(fileRecency, RECENCY);
+	auto compactness_pattern_set = LoadFrequentPatterns(fileCompactness, COMPACTNESS);
+	PatternSetAnalysis RM(recency_pattern_set, RECENCY);
+	PatternSetAnalysis CM(compactness_pattern_set, COMPACTNESS);
+	RM.set_pattern_num_lim(top_patterns);
+	CM.set_pattern_num_lim(top_patterns);
+	k_th_threshold[0] = RM.GetLastThreshold();
+	k_th_threshold[1] = CM.GetLastThreshold();
+	if (top_patterns == 4000 || top_patterns == 5000) {
+		auto pattern_set = RM.active_patterns;
+		int sz = pattern_set.size();
+		double mini = 1000000.0;
+		for (int j = 0; j < 1000; ++j) {
+			mini = std::min(mini, pattern_set[sz - 1 - j].frequency);
+			//printf("%lf\n", pattern_set[sz - 1 - j].frequency);
+		}
+		printf("sz: %d, mini: %.10lf\n", sz, mini);
+	}
+	printf("(%lf, %lf) (%lf %lf)\n", k_th_threshold[0], RM.GetLastFrequency(), k_th_threshold[1], CM.GetLastFrequency());
+	return k_th_threshold;
+}
+
+vector<double> Tester::CandidateKthRunTime(int efficient, string path, int top_patterns, vector<double> thresholds, Database &database) {
+	printf("Execution Time Test for K: %d\n", top_patterns);
+
+	PatternMiner recency_miner, compactness_miner;
+
+	// upperbound set to frequency support
+	recency_miner.efficient_upperbound = efficient;
+	compactness_miner.efficient_upperbound = efficient;
+
+	recency_miner.LoadTrainingDatabase(database.get_full_db());
+	compactness_miner.LoadTrainingDatabase(database.get_full_db());
+	recency_miner.Run(0.00039, thresholds[0], RECENCY);
+	compactness_miner.Run(0.00039, thresholds[1], COMPACTNESS);
+
+	//string filename1 = path + "what1.txt";
+	//string filename2 = path + "what2.txt";
+	//recency_miner.WritePatternFile(filename1);
+	//compactness_miner.WritePatternFile(filename2);
+	vector<double> candidate_gen(2);
+
+	candidate_gen[0] = recency_miner.GetNodeCnt();
+	candidate_gen[1] = compactness_miner.GetNodeCnt();
+
+	return candidate_gen;
+}
+
 void Tester::fold_divider(int fold_size, double transition_ratio_init_threshold, double transition_threshold, double ratio_threshold, double frequency_threshold, const string& path, Database &database) {
 	
 	printf("Dividing dataset %d folds\n", fold_size);
@@ -23,7 +159,7 @@ void Tester::fold_divider(int fold_size, double transition_ratio_init_threshold,
 	PrefixSpan frequency_version;
 
 	database.set_fold(fold_size);
-	database.print_stats();
+	database.printDatabaseInformation();
 
 	auto start = std::chrono::high_resolution_clock::now();
 	auto stop = std::chrono::high_resolution_clock::now();
@@ -112,6 +248,7 @@ void Tester::fold_divider(int fold_size, double transition_ratio_init_threshold,
 	cout << buffer;
 }
 
+
 vector<Pattern> Tester::LoadFrequentPatterns(const string &filename, const int option) {
 	ifstream infile(filename);
 	vector<Pattern> ret;
@@ -124,7 +261,7 @@ vector<Pattern> Tester::LoadFrequentPatterns(const string &filename, const int o
 	while (infile >> x) {
 		if (x == -1) {
 			infile >> y;
-			if(option != 3) infile >> frequency;
+			if (option != 3) infile >> frequency;
 			infile >> confidence;
 			vector<double> tmp_weights;
 			double weight;
@@ -138,7 +275,7 @@ vector<Pattern> Tester::LoadFrequentPatterns(const string &filename, const int o
 				infile >> weight;
 				tmp_weights.push_back(weight);
 			}
-			if(option == 1)ret.push_back(Pattern(option, vec, y, frequency, tmp_weights, confidence));
+			if (option == 1)ret.push_back(Pattern(option, vec, y, frequency, tmp_weights, confidence));
 			else if (option == 2) ret.push_back(Pattern(option, vec, y, frequency, tmp_weights, confidence));
 			else if (option == 3) ret.push_back(Pattern(option, vec, y, y, confidence));
 			ret.back().pattern_id = pattern_id++;
@@ -200,7 +337,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 	string output_filename = result_filename;
 	ofstream outfile(output_filename);
 
-	// Each fold is different
+
 	for (int i = 0; i < fold_size; ++i) {
 		sprintf(buffer, "\n%d(th) testing...\n", i + 1);
 		cout << buffer;
@@ -220,9 +357,9 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 
 		auto query_database = LoadTestSequences(testfile);
 
-		PatternSetAnalysis TM(transition_pattern_set);
-		PatternSetAnalysis RM(ratio_pattern_set);
-		PatternSetAnalysis FM(frequency_pattern_set);
+		PatternSetAnalysis TM(transition_pattern_set, RECENCY);
+		PatternSetAnalysis RM(ratio_pattern_set, COMPACTNESS);
+		PatternSetAnalysis FM(frequency_pattern_set, PRESENCE);
 		if (pattern_num_lim != -1) {
 			TM.set_pattern_num_lim(pattern_num_lim);
 			RM.set_pattern_num_lim(pattern_num_lim);
@@ -265,30 +402,35 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 
 		int query_database_sz = static_cast<int>(query_database.size());
 
-
-		double valid_queries = 0.0;
-		// queries that aren't suppose to be answered 
-		double dump_queries = 0.0;
-
 		for (int t = 0; t < query_database_sz; ++t) {
 			int sequence_id = query_database[t].sequence_id;
 			vector<int> &tmp = query_database[t].sequence;
 			if (tmp.size() == 1) {
 				dump_query++;
-				dump_queries++;
 				continue;
+			}
+
+			for (int i = 0; i < tmp.size(); ++i) {
+				if (tmp[i] < 0) {
+					printf("error: item index has negative value.\n");
+					exit(-1);
+				}
 			}
 
 			query_sequence.clear();
 			ground_truth_sequence.clear();
+
+			
 			transition_predictor.ClearRuleList();
 			ratio_predictor.ClearRuleList();
 			frequency_predictor.ClearRuleList();
+
 			
 			transition_retrieved.clear();
 			ratio_retrieved.clear();
 			frequency_retrieved.clear();
 
+			// split query sequence by split_ratio
 			int sz = (int)((double)tmp.size()*(1.0 - truth_split));
 			vector<int> tmp_seqeuence;
 
@@ -304,14 +446,13 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 
 			if (query_sequence.size() == 0 || ground_truth_sequence.size() == 0) {
 				dump_query++;
-				dump_queries++;
 				continue;
 			}
+
 			
-			valid_queries++;
-			transition_measure.valid_queries++;
-			ratio_measure.valid_queries++;
-			frequency_measure.valid_queries++;
+			transition_measure.total_queries++;
+			ratio_measure.total_queries++;
+			frequency_measure.total_queries++;
 			
 			start = std::chrono::high_resolution_clock::now();
 			stop = std::chrono::high_resolution_clock::now();
@@ -320,6 +461,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 			auto query_time_frequency_tmp = query_time_transition_tmp;
 
 			auto start1 = std::chrono::high_resolution_clock::now();
+			//generate rule, return prediction
 			transition_predictor.GenerateRules(query_sequence, 1, repeated_events);
 			transition_retrieved = transition_predictor.ReturnRulePrediction(top_k, repeated_events);
 			auto stop1 = std::chrono::high_resolution_clock::now();
@@ -337,7 +479,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 			auto stop3 = std::chrono::high_resolution_clock::now();
 			query_time_frequency_tmp += std::chrono::duration_cast<std::chrono::milliseconds>(stop3 - start3);
 
-			printf("\r%.2lf%, [%d][%d]", 100.0*(double)t / query_database_sz, transition_measure.matched_queries, dump_query + (transition_measure.valid_queries - transition_measure.matched_queries));
+			printf("\r%.2lf%, [%d][%d]", 100.0*(double)t / query_database_sz, transition_measure.matched_queries, dump_query + (transition_measure.total_queries - transition_measure.matched_queries));
 			
 		/*	if (transition_retrieved.size() < top_k || ratio_retrieved.size() < top_k || frequency_retrieved.size() < top_k) {
 				mismatch_because_insufficient_K++;
@@ -355,36 +497,34 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 			query_time_frequency += query_time_frequency_tmp;
 			avg_query_length += static_cast<double>(query_sequence.size());
 			success += 1.0;
-		
-			if (!transition_retrieved.empty()) {
-				transition_measure.correct_count += Accuracy(transition_retrieved, ground_truth_sequence);
+			
+			// compare with ground truth
+			if (transition_retrieved.size() >= top_k) {
+				transition_measure.accuracy += Accuracy(transition_retrieved, ground_truth_sequence);
 				transition_measure.precision += Precision(transition_retrieved, ground_truth_sequence);
 				transition_measure.recall += Recall(transition_retrieved, ground_truth_sequence);
 				transition_measure.r_precision += Rprecision(transition_retrieved, ground_truth_sequence);
-				transition_measure.weighted_hit += WeightedHit(sequence_id, transition_retrieved, ground_truth_sequence);
+				transition_measure.ndcg += NDCG(sequence_id, transition_retrieved, ground_truth_sequence);
 				transition_measure.tf_idf += TFIDF(sequence_id, transition_retrieved, ground_truth_sequence);
 				transition_measure.matched_queries++;
-				transition_measure.predictions += transition_retrieved.size();
 			}
-			if (!ratio_retrieved.empty()) {
-				ratio_measure.correct_count += Accuracy(ratio_retrieved, ground_truth_sequence);
+			if (ratio_retrieved.size() >= top_k) {
+				ratio_measure.accuracy += Accuracy(ratio_retrieved, ground_truth_sequence);
 				ratio_measure.precision += Precision(ratio_retrieved, ground_truth_sequence);
 				ratio_measure.recall += Recall(ratio_retrieved, ground_truth_sequence);
 				ratio_measure.r_precision += Rprecision(ratio_retrieved, ground_truth_sequence);
-				ratio_measure.weighted_hit += WeightedHit(sequence_id, ratio_retrieved, ground_truth_sequence);
+				ratio_measure.ndcg += NDCG(sequence_id, ratio_retrieved, ground_truth_sequence);
 				ratio_measure.tf_idf += TFIDF(sequence_id, ratio_retrieved, ground_truth_sequence);
 				ratio_measure.matched_queries++;
-				ratio_measure.predictions += ratio_retrieved.size();
 			}
-			if (!frequency_retrieved.empty()) {
-				frequency_measure.correct_count += Accuracy(frequency_retrieved, ground_truth_sequence);
+			if (frequency_retrieved.size() >= top_k) {
+				frequency_measure.accuracy += Accuracy(frequency_retrieved, ground_truth_sequence);
 				frequency_measure.precision += Precision(frequency_retrieved, ground_truth_sequence);
 				frequency_measure.recall += Recall(frequency_retrieved, ground_truth_sequence);
 				frequency_measure.r_precision += Rprecision(frequency_retrieved, ground_truth_sequence);
-				frequency_measure.weighted_hit += WeightedHit(sequence_id, frequency_retrieved, ground_truth_sequence);
+				frequency_measure.ndcg += NDCG(sequence_id, frequency_retrieved, ground_truth_sequence);
 				frequency_measure.tf_idf += TFIDF(sequence_id, frequency_retrieved, ground_truth_sequence);
 				frequency_measure.matched_queries++;
-				frequency_measure.predictions += frequency_retrieved.size();
 			}
 
 		}
@@ -431,6 +571,7 @@ void Tester::test_loadable(int fold_size, double split_ratio, int top_k, int pat
 double Tester::Accuracy(const vector<int> &rec, const vector<int> &ans) {
 	unordered_set<int> st;
 	for (const auto& e : ans) st.insert(e);
+	int cnt = 0;
 	for (const auto&e : rec) {
 		if (st.find(e) != st.end()) return 1.0;
 	}
@@ -451,39 +592,27 @@ double Tester::Rprecision(const vector<int> &rec, const vector<int> &ans) {
 	return (double)cnt / (double)ans.size();
 }
 
-double Tester::WeightedHit(const int sequence_id, const vector<int> &rec, const vector<int> & ans) {
-	unordered_set<int> st;
-	for (const auto& e : ans) st.insert(e);
-	for (int i = 0; i< rec.size(); ++i) {
+double Tester::NDCG(const int sequence_id, const vector<int> &rec, const vector<int> & ans) {
+	unordered_map<int, int> mp;
+	for (const auto& e : ans) mp[e]++;
+
+	double dcg = 0.0;
+	vector<double> vec;
+	for (int i = 0; i < rec.size(); ++i) {
 		const int &e = rec[i];
-		if (st.find(e) != st.end()) {
-			return (double)(ans.size() - i - 1) / (double)(ans.size());
+		if (mp[e] > 0) {
+			mp[e]--;
+			dcg += static_cast<double>(database_.get_tfidf_score(e, sequence_id)) / log2(static_cast<double>(i) + 2.0);
+			vec.push_back(static_cast<double>(database_.get_tfidf_score(e, sequence_id)));
 		}
 	}
-	return 0.0;
+	sort(vec.begin(), vec.end());
+	reverse(vec.begin(), vec.end());
+	double idcg = 0.0;
+	for (int i = 0; i < vec.size(); ++i) idcg += vec[i] / log2(static_cast<double>(i) + 2.0);
+	if (idcg == 0.0) return 0.0;
+	return dcg / idcg;
 }
-
-//double Tester::NDCG(const int sequence_id, const vector<int> &rec, const vector<int> & ans) {
-//	unordered_map<int, int> mp;
-//	for (const auto& e : ans) mp[e]++;
-//
-//	double dcg = 0.0;
-//	vector<double> vec;
-//	for (int i = 0; i < rec.size(); ++i) {
-//		const int &e = rec[i];
-//		if (mp[e] > 0) {
-//			mp[e]--;
-//			dcg += static_cast<double>(database_.get_tfidf_score(e, sequence_id)) / log2(static_cast<double>(i) + 2.0);
-//			vec.push_back(static_cast<double>(database_.get_tfidf_score(e, sequence_id)));
-//		}
-//	}
-//	sort(vec.begin(), vec.end());
-//	reverse(vec.begin(), vec.end());
-//	double idcg = 0.0;
-//	for (int i = 0; i < vec.size(); ++i) idcg += vec[i] / log2(static_cast<double>(i) + 2.0);
-//	if (idcg == 0.0) return 0.0;
-//	return dcg / idcg;
-//}
 
 double Tester::Precision(const vector<int> &rec, const vector<int> &ans) {
 	unordered_map<int, int> mp;
@@ -555,9 +684,9 @@ void Tester::WriteTopPatternInfo(int fold_size, string path, vector<int> pattern
 		auto frequency_pattern_set = LoadFrequentPatterns(fileC, 3);
 
 
-		PatternSetAnalysis TM(transition_pattern_set);
-		PatternSetAnalysis RM(ratio_pattern_set);
-		PatternSetAnalysis FM(frequency_pattern_set);
+		PatternSetAnalysis TM(transition_pattern_set, RECENCY);
+		PatternSetAnalysis RM(ratio_pattern_set, COMPACTNESS);
+		PatternSetAnalysis FM(frequency_pattern_set, PRESENCE);
 
 		total_pattern_num[0] += static_cast<int>(transition_pattern_set.size());
 		total_pattern_num[1] += static_cast<int>(ratio_pattern_set.size());
@@ -688,10 +817,10 @@ void Tester::ExperimentTopK(int fold_size, string path, int top_k, int repeated_
 		}
 		outfile << "\n";
 
-		// weightedF1
+		// NDCG
 		for (int j = 0; j < 3; ++j) {
 			for (int k = 0; k < top_patterns_sz; ++k) {
-				outfile << measures_[j][k].weightedF1;
+				outfile << measures_[j][k].ndcg;
 				if (!(j == 2 && k == top_patterns_sz - 1)) outfile << "\t";
 			}
 		}
@@ -714,10 +843,10 @@ void Tester::ExecutionTimeTest(int fold_size, string path, string dataset_path, 
 	const int pn_sz = static_cast<int>(pattern_numbers.size());
 	vector<vector<double>> threshold_matrix(3);
 	for (int i = 0; i < 3; ++i) threshold_matrix[i].resize(pn_sz);
-
+	int first_set = 1;
 	cout << "Number of K : " << pn_sz << "\n";
 	for (int i = 0; i < pn_sz; ++i) {
-		vector<double> ret = KthThreshold(fold_size, path, pattern_numbers[i]);
+		vector<double> ret = KthThreshold(first_set, path, pattern_numbers[i]);
 		for (int j = 0; j < 3; ++j) {
 			threshold_matrix[j][i] = ret[j];
 		}
@@ -740,7 +869,7 @@ void Tester::ExecutionTimeTest(int fold_size, string path, string dataset_path, 
 	}
 
 	Database database;
-	database.ReadDataSpmfFormat(dataset_path);
+	database.readNegOneDelimiterFormat(dataset_path);
 	vector<vector<double>> execution_time_matrix(3);
 	for (int i = 0; i < 3; ++i) execution_time_matrix[i].resize(pn_sz);
 
@@ -773,11 +902,14 @@ void Tester::ExecutionTimeTest(int fold_size, string path, string dataset_path, 
 	cout << "finished.\n";
 }
 
+// This function return the minimum threshold number for each pattern type.
 vector<double> Tester::KthThreshold(int fold_size, string path, int top_patterns) {
 
 	// parameter, string = dataset, K = 1000 := number of patterns.
 	
 	vector<double> k_th_threshold(3);
+	// Initialzie to maximum threshold
+	for (int i = 0; i < 3; ++i) k_th_threshold[i] = 1.0;
 
 	// fold 1 ~5, Kth threshold for each measure
 	for (int i = 0; i < fold_size; ++i) {
@@ -786,25 +918,25 @@ vector<double> Tester::KthThreshold(int fold_size, string path, int top_patterns
 		string fileB = path + "foldB" + to_string(i + 1);
 		string fileC = path + "foldC" + to_string(i + 1);
 
-		auto transition_pattern_set = LoadFrequentPatterns(fileA, 1);
-		auto ratio_pattern_set = LoadFrequentPatterns(fileB, 2);
-		auto frequency_pattern_set = LoadFrequentPatterns(fileC, 3);
+		auto recency_pattern_set = LoadFrequentPatterns(fileA, 1);
+		auto compactness_pattern_set = LoadFrequentPatterns(fileB, 2);
+		auto presence_pattern_set = LoadFrequentPatterns(fileC, 3);
 
-		PatternSetAnalysis TM(transition_pattern_set);
-		PatternSetAnalysis RM(ratio_pattern_set);
-		PatternSetAnalysis FM(frequency_pattern_set);
-		if (top_patterns != -1) {
-			TM.set_pattern_num_lim(top_patterns);
-			RM.set_pattern_num_lim(top_patterns);
-			FM.set_pattern_num_lim(top_patterns);
-		}
+		PatternSetAnalysis RM(recency_pattern_set, RECENCY);
+		PatternSetAnalysis CM(compactness_pattern_set, COMPACTNESS);
+		PatternSetAnalysis PM(presence_pattern_set, PRESENCE);
 
-		k_th_threshold[0] += TM.GetLastThreshold();
-		k_th_threshold[1] += RM.GetLastThreshold();
-		k_th_threshold[2] += FM.GetLastThreshold();
+		RM.set_pattern_num_lim(top_patterns);
+		CM.set_pattern_num_lim(top_patterns);
+		PM.set_pattern_num_lim(top_patterns);
+		
+
+		k_th_threshold[0] = std::min(k_th_threshold[0], RM.GetLastThreshold());
+		k_th_threshold[1] = std::min(k_th_threshold[1], CM.GetLastThreshold());
+		k_th_threshold[2] = std::min(k_th_threshold[2], PM.GetLastThreshold());
 	}
 
-	for (int i = 0; i < 3; ++i) k_th_threshold[i] /= static_cast<double>(fold_size);
+	//for (int i = 0; i < 3; ++i) k_th_threshold[i] /= static_cast<double>(fold_size);
 	return k_th_threshold;
 }
 
@@ -815,8 +947,8 @@ vector<double> Tester::KthRunTime(string path, int top_patterns, vector<double> 
 	PrefixSpan presence_miner;
 
 	// upperbound set to frequency support
-	recency_miner.efficient_upperbound = 1;
-	compactness_miner.efficient_upperbound = 1;
+	recency_miner.efficient_upperbound = 0;
+	compactness_miner.efficient_upperbound = 0;
 
 	auto start = std::chrono::high_resolution_clock::now();
 	auto stop = std::chrono::high_resolution_clock::now();
@@ -824,9 +956,9 @@ vector<double> Tester::KthRunTime(string path, int top_patterns, vector<double> 
 	auto mining_time_comp = mining_time_rec;
 	auto mining_time_pre = mining_time_rec;
 
-	recency_miner.LoadTrainingDatabase(database.get_full_db());
-	compactness_miner.LoadTrainingDatabase(database.get_full_db());
-	presence_miner.LoadTrainDatabase(database.get_full_db());
+	recency_miner.LoadTrainingDatabase(database.get_train_db(0));
+	compactness_miner.LoadTrainingDatabase(database.get_train_db(0));
+	presence_miner.LoadTrainDatabase(database.get_train_db(0));
 
 	start = std::chrono::high_resolution_clock::now();
 	recency_miner.Run(thresholds[0], thresholds[0], 1);
@@ -845,13 +977,23 @@ vector<double> Tester::KthRunTime(string path, int top_patterns, vector<double> 
 
 	vector<double> mining_time(3);
 
-	mining_time[0] = static_cast<double>(mining_time_rec.count());
+	/*mining_time[0] = static_cast<double>(mining_time_rec.count());
 	mining_time[1] = static_cast<double>(mining_time_comp.count());
-	mining_time[2] = static_cast<double>(mining_time_pre.count());
+	mining_time[2] = static_cast<double>(mining_time_pre.count());*/
+	// change to node_cnt
+	mining_time[0] = recency_miner.GetNodeCnt();
+	mining_time[1] = compactness_miner.GetNodeCnt();
+	mining_time[2] = presence_miner.GetNodeCnt();
 
 	return mining_time;
 }
 
+
+// bring up the whole database
+// do the pattern run
+// save it
+// get the nth pattern
+// do it again
 
 void Tester::ExperimentTimeNaive(int fold_size, string path, string dataset_path, vector<int> pattern_numbers) {
 	const int pn_sz = static_cast<int>(pattern_numbers.size());
@@ -878,7 +1020,7 @@ void Tester::ExperimentTimeNaive(int fold_size, string path, string dataset_path
 		}
 
 		Database database;
-		database.ReadDataSpmfFormat(dataset_path);
+		database.readNegOneDelimiterFormat(dataset_path);
 		vector<double> execution_time(pn_sz);
 
 		for (int i = 0; i < pn_sz; ++i) {

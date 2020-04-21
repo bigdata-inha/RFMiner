@@ -1,6 +1,6 @@
 #include "Database.h"
 
-void Database::ReadDataSpmfFormat(string file) {
+void Database::readNegOneDelimiterFormat(string file) {
 	unordered_set<int> items;
 	unordered_set<int> rep_check;
 	ifstream infile(file);
@@ -139,7 +139,7 @@ void Database::WriteTfIdfTable(const string &filename) {
 }
 
 
-void Database::print_stats() {
+void Database::printDatabaseInformation() {
 	cout << "loaded filename: " << filename << "\n";
 	cout << "number of transcation: " << N << "\n";
 	cout << "number of distinct items: " << unique_items << "\n";

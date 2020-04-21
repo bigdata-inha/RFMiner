@@ -15,47 +15,33 @@ struct Measure {
 	double accuracy;
 	double precision;
 	double recall;
-	double weighted_hit;
+	double ndcg;
 	double r_precision;
 	double tf_idf;
 	double relevance_score;
 	double coverage;
-	double predictions;
-	double valid_queries;
-	double correct_count;
-	double weightedF1;
+	int total_queries;
 	int matched_queries;
 	char buffer[1000];
 
 	Measure()
-		:accuracy(0.0), precision(0.0), recall(0.0), weighted_hit(0.0), r_precision(0.0), tf_idf(0.0), relevance_score(0.0), valid_queries(0.0), matched_queries(0), predictions(0.0), correct_count(0.0)
-	, weightedF1(0.0)
-	{}
+		:accuracy(0.0), precision(0.0), recall(0.0), ndcg(0.0), r_precision(0.0), tf_idf(0.0), relevance_score(0.0), total_queries(0), matched_queries(0) {}
 
 	void Calculate() {
-		double total = valid_queries;
+		double total = static_cast<double>(total_queries);
 		double match = static_cast<double>(matched_queries);
-		if (valid_queries == 0) {
-			printf("There was not a single query that is answerable?");
-			getchar();
-			exit(-1);
-		}
-		accuracy = 100.0*correct_count / total;
-		precision = 100.0*correct_count / predictions;
-		//printf("(%lf %lf) (%lf %lf)\n", correct_count, total, correct_count, predictions);
+		accuracy = 100.0*accuracy / total;
+		precision = 100.0*precision / total;
 		r_precision = 100.0*r_precision / total;
-		weighted_hit = 100.0*weighted_hit / total;
+		ndcg = 100.0*ndcg / total;
 		coverage = 100.0*match / total;
-		recall = 100.0*correct_count / valid_queries;
-		double weighted_precision = 100.0*weighted_hit / predictions;
-		double weighted_recall = 100.0*weighted_hit / valid_queries;
-		weightedF1 = 2.0*(weighted_precision*weighted_recall) / (weighted_precision + weighted_recall);
+		recall = 100.0*recall / total;
 		tf_idf = tf_idf / total;
 	}
 
 	void PrintStat() {
-		sprintf(buffer, "Accuracy: [%.2lf] Precision: [%.2lf], Rprecision: [%.2lf], WeightedF1: [%.2lf], Coverage: [%.1lf], Recall: [%.2lf], TFIDF: [%.6lf]\n", 
-			accuracy, precision, r_precision, weighted_hit, coverage, recall, tf_idf);
+		sprintf(buffer, "Accuracy: [%.2lf] Precision: [%.2lf], Rprecision: [%.2lf], NDCG: [%.2lf], Coverage: [%.1lf], Recall: [%.2lf], TFIDF: [%.6lf]\n", 
+			accuracy, precision, r_precision, ndcg, coverage, recall, tf_idf);
 		cout << buffer;
 	}
 };
@@ -67,11 +53,15 @@ struct PatternSetAnalysis {
 	double avg_pattern_length;
 	int number_unique_items;
 	int pattern_num_lim;
+	int type;
 
-	PatternSetAnalysis(vector<Pattern> a_patterns)
-		:patterns(a_patterns), pattern_num_lim(1000000) {
+	PatternSetAnalysis(vector<Pattern> a_patterns, int a_type)
+		:patterns(a_patterns), type(a_type), pattern_num_lim(1000000) {
 		// patterns are sorted in descending order according to their score
 		sort(patterns.begin(), patterns.end());
+		if (patterns.size() > 2) {
+			assert(patterns[0].interestingness > patterns[1].interestingness);
+		}
 		avg_pattern_length = 0.0;
 		number_unique_items = 0;
 		active_patterns = patterns;
@@ -92,13 +82,23 @@ struct PatternSetAnalysis {
 	}
 
 	void set_pattern_num_lim(int a_pattern_num_lim) {
+		int sz = 0;
 		if (a_pattern_num_lim == -1) pattern_num_lim = static_cast<int>(patterns.size());
-		else pattern_num_lim = a_pattern_num_lim;
-		int sz = std::min(static_cast<int>(patterns.size()), pattern_num_lim);
-		vector<Pattern> vec;
+		else {
+			pattern_num_lim = a_pattern_num_lim;
+			sz = std::min(static_cast<int>(patterns.size()), pattern_num_lim);
+			string type_string;
+			if (type == RECENCY) type_string = "RECENCY";
+			else if (type == COMPACTNESS) type_string = "COMPACTNESS";
+			else if (type == PRESENCE) type_string = "PRESENCE";
+			cout << "Setting pattern type:" << type_string << " (sz, pattern_num_lim, patterns.size())" << "(" << sz << ", "<< a_pattern_num_lim <<","<< patterns.size() << " ";
+		}
+		vector<Pattern> vec;		
 		for (int i = 0; i < sz; ++i) {
+			if(i + 1 < sz) assert(patterns[i].interestingness >= patterns[i + 1].interestingness);
 			vec.push_back(patterns[i]);
 		}
+		printf("last interesting value: %lf, size of active patterns: %d\n", vec.back().interestingness, vec.size());
 		active_patterns = vec;
 	}
 
@@ -110,6 +110,10 @@ struct PatternSetAnalysis {
 
 	double GetLastThreshold() {
 		return active_patterns.back().interestingness;
+	}
+
+	double GetLastFrequency() {
+		return active_patterns.back().frequency;
 	}
 
 	double get_avg_pattern_len() { return avg_pattern_length; }
@@ -128,7 +132,7 @@ public:
 
 	double Accuracy(const vector<int> &rec, const vector<int> &ans);
 	double Rprecision(const vector<int> &rec, const vector<int> &ans);
-	double WeightedHit(const int sequence_id, const vector<int> &rec, const vector<int> & ans);
+	double NDCG(const int sequence_id, const vector<int> &rec, const vector<int> & ans);
 	double Precision(const vector<int> &rec, const vector<int> &ans);
 	double Recall(const vector<int> &rec, const vector<int> &ans);
 	double TFIDF(const int sequence_id, const vector<int> &rec, const vector<int> &ans);
@@ -155,6 +159,10 @@ public:
 
 	void CaseStudy(string path);
 
+	void MineDatabase(int type, double threshold, const string& path, Database &database);
+	void CandidateGenTest(int efficient, string path, string dataset_path, vector<int> pattern_numbers);
+	vector<double> CandidateKthThreshold(string path, int top_patterns);
+	vector<double> CandidateKthRunTime(int efficient, string path, int top_patterns, vector<double> thresholds, Database &database);
 
 private:
 	vector<int> Q, S;
