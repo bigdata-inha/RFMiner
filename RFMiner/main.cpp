@@ -90,38 +90,5 @@ int main() {
 	BMSView1Test();
 	BMSView2Test();
 	FIFATest();
-	//KosarakTest();
-	//BibleTest();
-	//MSNBCTest();
-	//SIGNTest();
-	//retailTest();
-	//foodmartTest();
-	//chainstoreTest();
 	getchar();
-}
-
-// archive
-
-void ExampleTest() {
-	Database database;
-	database.readNegOneDelimiterFormat("b.txt");
-	database.printDatabaseInformation();
-
-	double transition_ratio_init_threshold = 0.168;
-	double transition_threshold = 0.168;
-	double ratio_threshold = 0.168;
-	double frequency_threshold = 0.5;
-	
-	PatternMiner transition, ratio, frequency;
-	transition.LoadTrainingDatabase(database.get_full_db());
-	ratio.LoadTrainingDatabase(database.get_full_db());
-	frequency.LoadTrainingDatabase(database.get_full_db());
-
-	transition.Run(transition_ratio_init_threshold, transition_ratio_init_threshold, 1);
-	ratio.Run(transition_ratio_init_threshold, transition_ratio_init_threshold, 2);
-	frequency.Run(frequency_threshold, frequency_threshold, 3);
-
-	transition.WritePatternFile("TransitionResult.txt");
-	ratio.WritePatternFile("RatioResult.txt");
-	frequency.WritePatternFile("FrequencyResult.txt");
 }
